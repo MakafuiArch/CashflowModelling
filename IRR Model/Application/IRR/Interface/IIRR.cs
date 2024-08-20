@@ -3,6 +3,7 @@ global using LossPremTuple = (System.DateTime StartDate, decimal LossPremValue);
 
 using CashflowModelling.Domain.IRR.DTOs;
 using CashflowModelling.Application.IRR.Payload;
+using IRR_Model.Domain.IRR.DTOs;
 
 
 
@@ -22,6 +23,9 @@ namespace CashflowModelling.Application.IRR.Interface
         Task<IEnumerable<PaidSchedule>> GetPaidLossSchedule(IEnumerable<int>? RetroProfileIds,
                                                                     IEnumerable<int>? RetroProgramIds);
         Task<IEnumerable<IRRLossSchedule>> GetIRRLossSchedule(double ClimateLoading);
+
+        Task<IEnumerable<CapitalSchedule>> GetCapitalSchedule();
+
         Decimal GrossEarnedPremium(DateTime StartDate, 
             DateTime EndDate, DateTime CommutationDate, IEnumerable<PremiumSchedule> IRRPremiumTable);
 

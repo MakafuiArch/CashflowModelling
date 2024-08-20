@@ -17,18 +17,18 @@
 
 
 
-        public int RetroProfileId { get { return _RetroProfileId; } }
+        public int RetroProfileId => _RetroProfileId;
 
-        public int RetroProgramId { get { return _RetroProgramId; } }
+        public int RetroProgramId => _RetroProgramId;
 
-        public int SPInvestorId { get { return _SPInvestorId; } }
+        public int SPInvestorId => _SPInvestorId;
 
 
-        public int Year {  get { return _year; } }
-        public DateTime LossOccurenceDay { get { return _lossOccurenceDay; } }
+        public int Year => _year;
+        public DateTime LossOccurenceDay => _lossOccurenceDay;
 
-        public Decimal UnadjustedIncurredLoss { get { return _unadjustedIncurredLoss; } }
+        public Decimal UnadjustedIncurredLoss => _unadjustedIncurredLoss;
 
-        public Decimal IncurredLoss { get { return _incurredLoss; } }
+        public Decimal IncurredLoss => _incurredLoss;
     }
 }

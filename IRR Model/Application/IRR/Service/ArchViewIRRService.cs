@@ -10,6 +10,7 @@ using Microsoft.Spark.Sql.Types;
 using Microsoft.Spark.Sql.Expressions;
 using Excel.FinancialFunctions;
 using NHibernate.UserTypes;
+using IRR_Model.Domain.IRR.DTOs;
 
 
 
@@ -62,8 +63,6 @@ namespace CashflowModelling.Application.IRR.Service
                                    Select(days => StartDate.AddDays(days));
 
             var EndDateRange = StartDateRange.Select(date => date.AddDays(1));
-
-            //var IsCommutable = StartDateRange.AsParallel().Select(s => s > CommutationDate ? 0 : 1);
 
 
             IEnumerable<DateTuple> DateRange =
@@ -691,8 +690,13 @@ namespace CashflowModelling.Application.IRR.Service
         }
 
 
-        
 
+        public async Task<IEnumerable<CapitalSchedule>> GetCapitalSchedule()
+        {
+
+
+            
+        }
 
 
 
