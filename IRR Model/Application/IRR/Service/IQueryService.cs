@@ -161,22 +161,50 @@ namespace IRR_Model.Application.IRR.Service
 
 
         public FormattableString FloatRecursionQuery(float AccumulationFactor) => $@"
+                
+                select 
+
+                    *, 
+
+                    Coalesce(lag([Ending Float]) over (order by [Row Number]), 0) As [Starting Float], 
+                    greatest(Coalesce([Starting Float], 0) + 0.5*[Float Change] , 0) As [Average Investment Float],
+
+                    Coalesce([Average Investment Float], 0)*{AccumulationFactor} As [Investment Income On Float], 
+
+                    Coalesce([Float Change] + [Starting Float] + [Investment Income On Float], 0) As [Ending Float]
+
+                from IRRTable
+             
+               ";
 
 
-              with recursive_cte as (
+
+        private readonly FormattableString _premiumScheduleQuery = $@"";
+
+        private readonly FormattableString _paidLossQuery = $@"";
+
+        private readonly FormattableString _capitalQuery = $@"";
+
+
+        public FormattableString CapitalRecursionQuery(float AccumulationFactor) => $@"
+
+
+            with recursive_cte as (
                  
                 select top 1 * 
-                    
-                    cast(0 as float) As [Starting Float],
 
-                    cast(Case when [Float Change]*0.5 > 0 
-                            then [Float Change]*0.5 else 0 end as float) As [Average Investment Float],
+                    [Capital Contribution] + cast(Case when [Incremental Cashflow] < 0 
+                            then [Incremental Cashflow] else 0 end as float) As [Starting Capital],
 
-                    cast(Case when [Float Change]*0.5*{AccumulationFactor} > 0 
-                            then [Float Change]*0.5*{AccumulationFactor} else 0 end as float) As [Investment Income on Float],
+                    ([Capital Contribution] + cast(Case when [Incremental Cashflow] < 0 
+                            then [Incremental Cashflow] 
+                            else 0 end as float) As [Starting Capital]) * {AccumulationFactor} As [Investment Income Capital],
 
-                    cast([Float Change] + Case when [Float Change]*0.5*{AccumulationFactor} > 0 
-                            then [Float Change]*0.5*{AccumulationFactor} else 0 end as float) As [Ending Float],
+                    [Capital Contribution] + cast(Case when [Incremental Cashflow] < 0 
+                            then [Incremental Cashflow] else 0 end as float) As [Starting Capital] + 
+                    ([Capital Contribution] + cast(Case when [Incremental Cashflow] < 0 
+                            then [Incremental Cashflow] 
+                            else 0 end as float) As [Starting Capital]) * {AccumulationFactor}  As [Ending Capital],
                 
                 from IRRTable 
 
@@ -186,34 +214,27 @@ namespace IRR_Model.Application.IRR.Service
                     
                     irrtable.*, 
 
-                    recurs.[Ending Float] As [Starting Float]
+                    recurs.[Ending Capital] + irrtable.[Capital Contribution] + cast(Case when 
+                            irrtable.[Incremental Cashflow] < 0 
+                            then irrtable.[Incremental Cashflow] else 0 end as float) As [Starting Capital]
 
-                    cast(Case when recurs.[Ending Float] + 0.5*irrtable.[Float Change] > 0 
-		
-			                then recurs.[Ending Float] + 0.5*irrtable.[Float Change]
-			    
-			                else 0 
-			
-		                    end as float) As [Average Investment Float],
+                     (irrtable.[Capital Contribution] + recurs.[Ending Capital] + 
+                            irrtable.[Capital Contribution] + cast(Case when 
+                            irrtable.[Incremental Cashflow] < 0 
+                            then irrtable.[Incremental Cashflow] else 0 end as float)*{AccumulationFactor}  
+                            As [Investment Income Capital],
 
-                    cast(Case when recurs.[Ending Float] + 0.5*irrtable.[Float Change] > 0 
-		
-			                then recurs.[Ending Float] + 0.5*irrtable.[Float Change]
-			    
-			                else 0 
-			
-		                    end * {AccumulationFactor} as float) As [Average Investment Float],
+                    recurs.[Ending Capital] + irrtable.[Capital Contribution] + cast(Case when 
+                            irrtable.[Incremental Cashflow] < 0 
+                            then irrtable.[Incremental Cashflow] else 0 end as float) + 
+                      
+                      (irrtable.[Capital Contribution] + recurs.[Ending Capital] + 
+                            irrtable.[Capital Contribution] + cast(Case when 
+                            irrtable.[Incremental Cashflow] < 0 
+                            then irrtable.[Incremental Cashflow] else 0 end as float)*{AccumulationFactor}   
 
 
-                    irrtable.[Float Change] + recurs.[Ending Float] + 
-                    
-                    cast(Case when recurs.[Ending Float] + 0.5*irrtable.[Float Change] > 0 
-		
-			                then recurs.[Ending Float] + 0.5*irrtable.[Float Change]
-			    
-			                else 0 
-			
-		                    end * {AccumulationFactor} as float) As [Investment Income on Float]
+                    As [Ending Capital]
 
 
                 from IRRtable irrtable 
@@ -225,16 +246,8 @@ namespace IRR_Model.Application.IRR.Service
              )
              select * from recursive_cte;
              option(maxrecursion 0)
-               ";
 
-
-
-        private readonly FormattableString _premiumScheduleQuery = $@"";
-
-        private readonly FormattableString _paidLossQuery = $@"";
-
-
-        private readonly FormattableString _capitalScheduleQuery = $@"";
+           ";
 
 
 
@@ -243,9 +256,6 @@ namespace IRR_Model.Application.IRR.Service
         public FormattableString GetPremiumScheduleQuery() => _premiumScheduleQuery;
 
         public FormattableString GetPaidLossQuery() => _paidLossQuery;
-
-
-        public FormattableString GetCapitalScheduleQuery () => _capitalScheduleQuery;
 
 
         public async Task<IEnumerable<T>> QuerySet<T>(FormattableString query)
@@ -258,6 +268,6 @@ namespace IRR_Model.Application.IRR.Service
 
         }
 
-
+        public FormattableString GetCapitalScheduleQuery() => _capitalQuery;
     }
 }

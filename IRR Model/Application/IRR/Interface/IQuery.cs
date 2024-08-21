@@ -13,6 +13,8 @@
 
         FormattableString GetCapitalScheduleQuery();
 
+        FormattableString CapitalRecursionQuery(float AccumulationFactor);
+
         FormattableString FloatRecursionQuery(float AccumulationFactor);
 
 
