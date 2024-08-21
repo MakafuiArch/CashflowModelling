@@ -152,7 +152,7 @@ namespace IRR_Model.Application.IRR.Service
 
                         )
 
-                select RetroProfileId, SPInvestor,
+                select SPInvestor, RetroProfileId, 
                      RetroProgramId, Format(LayerInception, 'dd/MM/yyyy')
                      As LayerInception , 
                      TotalSubjectPremium from irr_premium_inputs 
@@ -184,6 +184,8 @@ namespace IRR_Model.Application.IRR.Service
         private readonly FormattableString _paidLossQuery = $@"";
 
         private readonly FormattableString _capitalQuery = $@"";
+
+        private readonly FormattableString _bufferScheduleQuery = $"";
 
 
         public FormattableString CapitalRecursionQuery(float AccumulationFactor) => $@"
@@ -250,12 +252,18 @@ namespace IRR_Model.Application.IRR.Service
            ";
 
 
+        
+
+
 
         public FormattableString GetIRRPremiumString() => _IRRPremiumQuery;
 
         public FormattableString GetPremiumScheduleQuery() => _premiumScheduleQuery;
 
         public FormattableString GetPaidLossQuery() => _paidLossQuery;
+
+
+        public FormattableString GetBufferQuery() => _bufferScheduleQuery;
 
 
         public async Task<IEnumerable<T>> QuerySet<T>(FormattableString query)

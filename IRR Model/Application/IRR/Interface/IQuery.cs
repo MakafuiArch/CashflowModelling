@@ -17,6 +17,8 @@
 
         FormattableString FloatRecursionQuery(float AccumulationFactor);
 
+        FormattableString GetBufferQuery();
+
 
     }
 }

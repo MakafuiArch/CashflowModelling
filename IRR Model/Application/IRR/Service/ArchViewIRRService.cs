@@ -2,7 +2,6 @@
 using FluentNHibernate.Conventions;
 using CashflowModelling.Application.IRR.Interface;
 using CashflowModelling.Application.IRR.Payload;
-using CashflowModelling.Domain.IRR.Model;
 using Microsoft.IdentityModel.Tokens;
 using System.Numerics;
 using Microsoft.Spark.Sql;
@@ -11,12 +10,6 @@ using Microsoft.Spark.Sql.Expressions;
 using Excel.FinancialFunctions;
 using IRR_Model.Domain.IRR.DTOs;
 using Microsoft.EntityFrameworkCore.Metadata;
-
-
-
-
-
-
 
 
 
@@ -48,15 +41,16 @@ namespace CashflowModelling.Application.IRR.Service
         /// <param name="input"></param>
         /// <returns></returns>
         /// <exception cref="NotImplementedException"></exception>
-        public async Task<IEnumerable<Decimal>> MultiYearIRRComputation(IRRInputs input)
+        public async Task<Dictionary<int, Tuple<DataFrame, double>>> MultiYearIRRComputation(IRRInputs input)
         {
             var StartDate = input.QuarterStartDate;
             var EndDate = input.QuarterEndDate;
             var CommutationDate = input.CommutationDate;
             var RetroProgramIds = input.RetroProgramIds;
-            var RetroProfileIds = input.RetroProfileIds;
+            var SPInvestorIds = input.SPInvestorIds;
 
-            var dataframes = new List<Tuple<DataFrame, double>>();
+
+            var responseDictionary = new Dictionary<int, Tuple<DataFrame, double>>();
 
 
 
@@ -73,10 +67,10 @@ namespace CashflowModelling.Application.IRR.Service
             //Read all the tables as IRR Inputs
 
             Task<IEnumerable<PremiumSchedule>> PremiumTable =
-                this.GetPremiumSchedule(RetroProgramIds, RetroProfileIds);
+                this.GetPremiumSchedule(RetroProgramIds, SPInvestorIds);
 
 
-            Task<IEnumerable<PaidSchedule>> PaidLossTable = this.GetPaidLossSchedule(RetroProfileIds,
+            Task<IEnumerable<PaidSchedule>> PaidLossTable = this.GetPaidLossSchedule(SPInvestorIds,
                                                                                 RetroProgramIds);
 
             Task<IEnumerable<IRRLossSchedule>> IncurredLossTable = this.GetIRRLossSchedule();
@@ -96,20 +90,23 @@ namespace CashflowModelling.Application.IRR.Service
              */
 
 
-            Parallel.ForEach(RetroProfileIds!, async (retroprofileid) =>
+            Parallel.ForEach(SPInvestorIds!, async (SPInvestorId) =>
             {
-                var PremTable = PremiumTable.Result.Where(p => p.RetroProfileId == retroprofileid);
-                var PaidTable = PaidLossTable.Result.Where(p => p.RetroProfileId == retroprofileid);
-                var IncurredTable = IncurredLossTable.Result.Where(p => p.RetroProfileId == retroprofileid);
+                var PremTable = PremiumTable.Result.Where(p => p.SPInvestorId== SPInvestorId);
+                var PaidTable = PaidLossTable.Result.Where(p => p.SPInvestorId == SPInvestorId);
+                var IncurredTable = IncurredLossTable.Result.Where(p => p.SPInvestorId == SPInvestorId);
 
-                dataframes.Add(await ComputeIRR(PremTable, PaidTable,
-                                        IncurredTable, CapitalTable.Result,input, DateRange));
+
+                var dataframeIRRResponse = await ComputeIRR(PremTable, PaidTable,
+                                        IncurredTable, CapitalTable.Result, input, DateRange);
+
+                responseDictionary.Add(SPInvestorId, dataframeIRRResponse);
 
             });
 
 
 
-            throw new NotImplementedException();
+            return responseDictionary;
         }
 
 
@@ -120,10 +117,10 @@ namespace CashflowModelling.Application.IRR.Service
         /// <param name="PremiumTable"></param>
         /// <param name="PaidLossTable"></param>
         /// <param name="IncurredLossTable"></param>
+        /// <param name="CapitalTable"></param>
         /// <param name="input"></param>
         /// <param name="DateRange"></param>
         /// <returns></returns>
-        /// <exception cref="NotImplementedException"></exception>
         private async Task<Tuple<DataFrame, double>> ComputeIRR(IEnumerable<PremiumSchedule> PremiumTable, 
                                             IEnumerable<PaidSchedule> PaidLossTable, 
                                             IEnumerable<IRRLossSchedule> IncurredLossTable, 
@@ -310,12 +307,11 @@ namespace CashflowModelling.Application.IRR.Service
         }
 
 
-
         /// <summary>
         /// 
         /// </summary>
         /// <param name="IrrTable"></param>
-        /// <param name="AccumulationFactor"></param>
+        /// <param name="query"></param>
         /// <returns></returns>
         private static DataFrame RecursiveCTE(DataFrame IrrTable, string query)
         {
@@ -339,7 +335,8 @@ namespace CashflowModelling.Application.IRR.Service
 
             var spark = SparkSession.Builder().GetOrCreate();
 
-            var FirstRow = spark.Sql("Select top 1 [Row Number], [Float Change] From IRRTable Order by [Row Number]").Collect().ElementAt(0);
+            var FirstRow = spark.Sql("Select top 1 [Row Number], " +
+                "[Float Change] From IRRTable Order by [Row Number]").Collect().ElementAt(0);
 
             double StartingFloat = 0;
 
@@ -431,7 +428,7 @@ namespace CashflowModelling.Application.IRR.Service
             var EndDate = input.QuarterEndDate;
             var CommutationDate = input.CommutationDate;
             var RetroProgramIds = input.RetroProgramIds;
-            var RetroProfileIds = input.RetroProfileIds;
+            var SPInvestorIds = input.SPInvestorIds;
             var AcquisitonExpenseRate = input.AcquisitionExpense;
             var ProfitHurdle = 0;
 
@@ -464,10 +461,10 @@ namespace CashflowModelling.Application.IRR.Service
             //Read all the tables as IRR Inputs
 
             Task<IEnumerable<PremiumSchedule>> PremiumTable =
-                this.GetPremiumSchedule(RetroProgramIds, RetroProfileIds);
+                this.GetPremiumSchedule(RetroProgramIds, SPInvestorIds);
 
             
-            Task<IEnumerable<PaidSchedule>> PaidLossTable = this.GetPaidLossSchedule(RetroProfileIds,
+            Task<IEnumerable<PaidSchedule>> PaidLossTable = this.GetPaidLossSchedule(SPInvestorIds,
                                                                                 RetroProgramIds);
 
             Task<IEnumerable<IRRLossSchedule>> IncurredLossTable = this.GetIRRLossSchedule();
@@ -575,17 +572,7 @@ namespace CashflowModelling.Application.IRR.Service
 
             });
           
-
-           
-
-            switch (input.ViewType)
-            {
-                case (int)ViewType.ArchView:
-                    break;
-                case (int)ViewType.SensitivityView:
-                    break;
-
-            }
+       
             throw new NotImplementedException();
         }
 
@@ -759,11 +746,11 @@ namespace CashflowModelling.Application.IRR.Service
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="RetroProfileIds"></param>
+        /// <param name="SPInvestorIds"></param>
         /// <param name="RetroProgramIds"></param>
         /// <returns></returns>
         //Get Paid Loss Schedule
-        public async Task<IEnumerable<PaidSchedule>> GetPaidLossSchedule(IEnumerable<int>? RetroProfileIds,
+        public async Task<IEnumerable<PaidSchedule>> GetPaidLossSchedule(IEnumerable<int>? SPInvestorIds,
                                                                     IEnumerable<int>? RetroProgramIds)
         {
             return await _queryService.QuerySet<PaidSchedule>(_queryService.GetPaidLossQuery());
@@ -784,12 +771,12 @@ namespace CashflowModelling.Application.IRR.Service
         {
             FormattableString _queryString = ids.IsEmpty()
                 ? $@"{_queryService.GetIRRPremiumString()} 
-                     order by RetroProfileId, SPInvestor, 
+                     order by SPInvestor, RetroProfileId, 
                      RetroProgramId, LayerInception;"
 
                 : (FormattableString)$@"{_queryService.GetIRRPremiumString()}
-                               where RetroProfileId in ({string.Join(",", ids!)})
-                               order by RetroProfileId, SPInvestor, 
+                               where SPInvestor in ({string.Join(",", ids!)})
+                               order by SPInvestor, RetroProfileId, 
                                RetroProgramId, LayerInception;";
 
             return await _queryService.QuerySet<IRRPremiumInputDTO>(_queryString);
@@ -801,24 +788,24 @@ namespace CashflowModelling.Application.IRR.Service
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="RetroProfileIds"></param>
+        /// <param name="SPInvestorIds"></param>
         /// <param name="RetroProgramIds"></param>
         /// <returns></returns>
         //Get Premium Schedule
-        public async Task<IEnumerable<PremiumSchedule>> GetPremiumSchedule(IEnumerable<int>? RetroProfileIds,
+        public async Task<IEnumerable<PremiumSchedule>> GetPremiumSchedule(IEnumerable<int>? SPInvestorIds,
                                                                     IEnumerable<int>? RetroProgramIds)
         {
             return await _queryService.QuerySet<PremiumSchedule>(_queryService.GetPremiumScheduleQuery());
         }
 
         public async Task<IEnumerable<IRRPremiumInputDTO>> GetIRRPremiumInput(
-                                                                    IEnumerable<int>? RetroProfileIds, 
+                                                                    IEnumerable<int>? SPInvestorIds, 
                                                                     IEnumerable<int>? RetroProgramIds)
         {
-            FormattableString RetroProfileIdString =
+            FormattableString SPInvestorIdstring =
                RetroProgramIds.IsNullOrEmpty() ? $@"" :
-                (FormattableString)$@"where RetroProfileId in 
-                                        ({string.Join(",", RetroProfileIds!)})";
+                (FormattableString)$@"where SPInvestor in 
+                                        ({string.Join(",", SPInvestorIds!)})";
 
             FormattableString RetroProgramIdString =
                 RetroProgramIds.IsNullOrEmpty() ? $@"" :
@@ -827,7 +814,7 @@ namespace CashflowModelling.Application.IRR.Service
 
 
             FormattableString _queryString = $@"{_queryService.GetIRRPremiumString()} 
-                                  {RetroProfileIdString} {RetroProgramIdString}
+                                  {SPInvestorIdstring} {RetroProgramIdString}
                                   order by RetroProfileId, SPInvestor, 
                                   RetroProgramId, LayerInception;";
 
@@ -843,6 +830,12 @@ namespace CashflowModelling.Application.IRR.Service
             
         }
 
+
+        public async Task<IEnumerable<BufferSchedule>> GetBufferSchedule()
+        {
+            return await _queryService.QuerySet<BufferSchedule>(_queryService.GetBufferQuery());
+
+        }
 
 
         /// <summary>
@@ -862,8 +855,6 @@ namespace CashflowModelling.Application.IRR.Service
                                     CumulativeSum(IncurDateTuple, CommutationDate));
 
         }
-
-
 
 
         /// <summary>

@@ -12,6 +12,12 @@ namespace CashflowModelling.Controllers
       
         private readonly IIRR _irrService = irrService;
 
+
+        /// <summary>
+        /// Get the Premium Schedule for all Special Purpose Vehichle Investor Id  (SPInvestorId) specified
+        /// </summary>
+        /// <param name="ids"> This parameter in the list of all the SPInvestorId</param>
+        /// <returns>This returns an enumeration of all the Premium Schedules</returns>
         [HttpPost("GetPremiums")]
         public IEnumerable<IRRPremiumInputDTO> GetPremium([FromBody] List<int> ids)
         {
@@ -20,6 +26,13 @@ namespace CashflowModelling.Controllers
         }
 
 
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="ids"></param>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
         [HttpPost("GetCashFlows")]
         public DataFrame GetCashFlows([FromBody] List<int> ids)
         {

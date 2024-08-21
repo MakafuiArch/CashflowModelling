@@ -4,6 +4,8 @@ using CashflowModelling.Domain.IRR.DBContext;
 using CashflowModelling.Infrastructure.Interface;
 using IRR_Model.Application.IRR.Service;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi.Models;
+using System.Reflection;
 
 namespace CashflowModelling.Infrastructure
 {
@@ -37,12 +39,40 @@ namespace CashflowModelling.Infrastructure
                 options => options.UseSqlServer(c.GetConnectionString("Revoreader"))
                 );
 
-            
+
+
+
+            builder.Services.AddSwaggerGen(config =>
+
+            {
+                config.SwaggerDoc(
+
+                    "v1",
+
+                    new OpenApiInfo
+                    {
+                        Version = "v1",
+                        Title = "Cashflow Modelling Service",
+                        Description = "This Service Is To Model IRR For Any Give Retrocession Program"
+                    });
+
+                var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+                var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile); 
+
+                config.IncludeXmlComments(xmlPath);
+
+            }
+
+            );
+
+
             var app = builder.Build();
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
             {
+                
+
                 app.UseSwagger();
                 app.UseSwaggerUI(config =>
                 {
@@ -51,6 +81,8 @@ namespace CashflowModelling.Infrastructure
                         ["activated"] = false
                     };
                 });
+
+
             }
 
             app.UseHttpsRedirection();

@@ -6,11 +6,12 @@ namespace CashflowModelling.Domain.IRR.DTOs
 {
     public class IRRPremiumInputDTO
     {
-        [Model(ColumnName ="RetroProfileId")]
-        public int RetroProfileId { get; set; }
 
         [Model(ColumnName = "SPInvestor")]
         public int SPInvestor { get; set; }
+
+        [Model(ColumnName ="RetroProfileId")]
+        public int RetroProfileId { get; set; }
 
         [Model(ColumnName = "RetroProgramId")]
         public int RetroProgramId { get; set; }
@@ -30,8 +31,9 @@ namespace CashflowModelling.Domain.IRR.DTOs
 
         
 
-        public IRRPremiumInputDTO(int RetroProfileId, 
-            int SPInvestor, 
+        public IRRPremiumInputDTO(
+            int SPInvestor,
+            int RetroProfileId, 
             int RetroProgramId, 
             String LayerInception, 
             Decimal TotalSubjectPremium){
