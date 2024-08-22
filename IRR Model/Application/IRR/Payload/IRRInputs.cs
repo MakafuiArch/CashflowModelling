@@ -1,19 +1,17 @@
-﻿using CashflowModelling.Domain.IRR.Model;
-using IRR_Model.Domain.IRR.DTOs;
+﻿using IRR_Model.Domain.IRR.DTOs;
 using LanguageExt;
-using System.ComponentModel.DataAnnotations;
-using System.Runtime.CompilerServices;
+
 
 namespace CashflowModelling.Application.IRR.Payload
 {
     public record IRRInputs(
         int Duration,
         DateTime CommutationDate,
-        DateTime QuarterStartDate,
-        DateTime QuarterEndDate,
+        DateTime? QuarterStartDate,
+        DateTime? QuarterEndDate,
         double Capital,
         IEnumerable<int>? RetroProgramIds,
-        IEnumerable<int>? SPInvestorIds,
+        int SPInvestorId,
         IEnumerable<double>? IncrementalCapitalAdded,
         IEnumerable<CapitalSchedule>? CapitalSchedules,
         int ViewType,
@@ -22,6 +20,6 @@ namespace CashflowModelling.Application.IRR.Payload
     {
 
         private IEnumerable<CapitalSchedule> GetCapitalSchedule() => CapitalSchedules.IsNull() ? new List<CapitalSchedule>([new
-                CapitalSchedule(1, (decimal)Capital, QuarterStartDate)]) : CapitalSchedules!;
+                CapitalSchedule(1, (decimal)Capital, (DateTime) QuarterStartDate!)]) : CapitalSchedules!;
     }
 }

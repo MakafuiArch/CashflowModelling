@@ -14,13 +14,12 @@ namespace CashflowModelling.Application.IRR.Interface
     public interface IIRR
     {
         Task<IEnumerable<IRRPremiumInputDTO>> GetIRRPremiumInput(IEnumerable<int>? ids);
-        Task<IEnumerable<IRRPremiumInputDTO>> ComputeIRR(IRRInputs iRRInputs);
-        Task<IEnumerable<PremiumSchedule>> GetPremiumSchedule(IEnumerable<int>? RetroProfileIds,
+        Task<IEnumerable<PremiumSchedule>> GetPremiumSchedule(int SPInvestorId,
                                                                     IEnumerable<int>? RetroProgramIds);
         Task<IEnumerable<IRRPremiumInputDTO>> GetIRRPremiumInput(
-                                                                    IEnumerable<int>? RetroProfileIds,
+                                                                    int SPInvestorId,
                                                                     IEnumerable<int>? RetroProgramIds);
-        Task<IEnumerable<PaidSchedule>> GetPaidLossSchedule(IEnumerable<int>? RetroProfileIds,
+        Task<IEnumerable<PaidSchedule>> GetPaidLossSchedule(int SPInvestorId,
                                                                     IEnumerable<int>? RetroProgramIds);
         Task<IEnumerable<IRRLossSchedule>> GetIRRLossSchedule(double ClimateLoading);
 

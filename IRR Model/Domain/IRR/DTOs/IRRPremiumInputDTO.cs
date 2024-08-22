@@ -1,9 +1,9 @@
-﻿
-
-using CashflowModelling.Domain.IRR.ModelMappers;
+﻿using CashflowModelling.Domain.IRR.ModelMappers;
 
 namespace CashflowModelling.Domain.IRR.DTOs
 {
+
+    [Serializable]
     public class IRRPremiumInputDTO
     {
 

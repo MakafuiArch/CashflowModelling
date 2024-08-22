@@ -284,7 +284,7 @@ namespace IRR_Model.Application.IRR.Service
         {
             var Apiservice = new APIService<TDataType, TResponseType>(apiURL, datatype);
 
-            return await Task.FromResult(Apiservice.GetAPIResponse());
+            return await Apiservice.GetAPIResponse();
         }
 
         public FormattableString GetCapitalScheduleQuery() => _capitalQuery;

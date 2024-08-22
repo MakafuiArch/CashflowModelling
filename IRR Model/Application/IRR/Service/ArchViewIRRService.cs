@@ -1,5 +1,4 @@
 ﻿using CashflowModelling.Domain.IRR.DTOs;
-using FluentNHibernate.Conventions;
 using CashflowModelling.Application.IRR.Interface;
 using CashflowModelling.Application.IRR.Payload;
 using Microsoft.IdentityModel.Tokens;
@@ -41,20 +40,20 @@ namespace CashflowModelling.Application.IRR.Service
         /// <param name="input"></param>
         /// <returns></returns>
         /// <exception cref="NotImplementedException"></exception>
-        public async Task<Dictionary<int, Tuple<DataFrame, double>>> MultiYearIRRComputation(IRRInputs input)
+        public async Task<Dictionary<int, Tuple<DataFrame, double>>> GetIRRForSPInvestor(IRRInputs input)
         {
-            var StartDate = input.QuarterStartDate;
-            var EndDate = input.QuarterEndDate;
+            var StartDate = (DateTime)input.QuarterStartDate!;
+            var EndDate = (DateTime) input.QuarterEndDate!;
             var CommutationDate = input.CommutationDate;
             var RetroProgramIds = input.RetroProgramIds;
-            var SPInvestorIds = input.SPInvestorIds;
+            var SPInvestorId = input.SPInvestorId;
 
 
             var responseDictionary = new Dictionary<int, Tuple<DataFrame, double>>();
 
 
 
-            var StartDateRange = Enumerable.Range(0, EndDate.Subtract(StartDate).Days + 1).
+            var StartDateRange = Enumerable.Range(0,  EndDate.Subtract(StartDate).Days + 1).
                                    Select(days => StartDate.AddDays(days));
 
             var EndDateRange = StartDateRange.Select(date => date.AddDays(1));
@@ -67,10 +66,10 @@ namespace CashflowModelling.Application.IRR.Service
             //Read all the tables as IRR Inputs
 
             Task<IEnumerable<PremiumSchedule>> PremiumTable =
-                GetPremiumSchedule(RetroProgramIds, SPInvestorIds);
+                GetPremiumSchedule(SPInvestorId, RetroProgramIds);
 
 
-            Task<IEnumerable<PaidSchedule>> PaidLossTable = this.GetPaidLossSchedule(SPInvestorIds,
+            Task<IEnumerable<PaidSchedule>> PaidLossTable = this.GetPaidLossSchedule(SPInvestorId,
                                                                                 RetroProgramIds);
 
             Task<IEnumerable<IRRLossSchedule>> IncurredLossTable = this.GetIRRLossSchedule();
@@ -90,23 +89,14 @@ namespace CashflowModelling.Application.IRR.Service
              */
 
 
-            Parallel.ForEach(SPInvestorIds!, async (SPInvestorId) =>
-            {
-                var PremTable = PremiumTable.Result.Where(p => p.SPInvestorId== SPInvestorId);
-                var PaidTable = PaidLossTable.Result.Where(p => p.SPInvestorId == SPInvestorId);
-                var IncurredTable = IncurredLossTable.Result.Where(p => p.SPInvestorId == SPInvestorId);
-
-
-                var dataframeIRRResponse = await ComputeIRR(PremTable, PaidTable,
-                                        IncurredTable, CapitalTable.Result, input, DateRange);
+                var dataframeIRRResponse = await ComputeIRR(PremiumTable.Result, PaidLossTable.Result,
+                                        IncurredLossTable.Result, CapitalTable.Result, input, DateRange);
 
                 responseDictionary.Add(SPInvestorId, dataframeIRRResponse);
 
-            });
 
 
-
-            return responseDictionary;
+                return responseDictionary;
         }
 
 
@@ -415,166 +405,6 @@ namespace CashflowModelling.Application.IRR.Service
         }
 
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="input"></param>
-        /// <returns></returns>
-        /// <exception cref="NotImplementedException"></exception>
-        public async Task<IEnumerable<IRRPremiumInputDTO>> ComputeIRR(IRRInputs input)
-        {
-
-            var StartDate = input.QuarterStartDate;
-            var EndDate = input.QuarterEndDate;
-            var CommutationDate = input.CommutationDate;
-            var RetroProgramIds = input.RetroProgramIds;
-            var SPInvestorIds = input.SPInvestorIds;
-            var AcquisitonExpenseRate = input.AcquisitionExpense;
-            var ProfitHurdle = 0;
-
-
-            var NetCededPremium = new List<decimal>();
-            var StartingFloat = new List<decimal>();
-            var FloatChange = new List<decimal>();
-            var EndingFloat = new List<decimal>();
-            var AverageInvestmentFloat = new List<decimal>();
-            var InvestmentFloat = new List<decimal>();
-            var SubjectToProfitCommission = new List<decimal>();
-            var CumulativeCashflow = new List<decimal>();
-            var TotalEarnedProfit = new List<decimal>();
-
-
-            //Get all the date ranges 
-            var StartDateRange = Enumerable.Range(0, EndDate.Subtract(StartDate).Days+1).
-                                      AsParallel().Select(days => StartDate.AddDays(days));
-
-            var EndDateRange = StartDateRange.AsParallel().Select(date  => date.AddDays(1));
-
-
-            IEnumerable<DateTuple> DateRange =
-                (IEnumerable<DateTuple>) ListsToTuple<DateTime, DateTime>(StartDateRange, 
-                EndDateRange);
-
-
-            var IsCommutable = StartDateRange.AsParallel().Select(s => s > CommutationDate ? 0 : 1);
-
-            //Read all the tables as IRR Inputs
-
-            Task<IEnumerable<PremiumSchedule>> PremiumTable =
-                this.GetPremiumSchedule(RetroProgramIds, SPInvestorIds);
-
-            
-            Task<IEnumerable<PaidSchedule>> PaidLossTable = this.GetPaidLossSchedule(SPInvestorIds,
-                                                                                RetroProgramIds);
-
-            Task<IEnumerable<IRRLossSchedule>> IncurredLossTable = this.GetIRRLossSchedule();
-
-
-            await Task.WhenAll(PremiumTable, PaidLossTable, IncurredLossTable);
-
-
-
-
-            // Get the all the required data forms for IRR calculation
-            var GrossEarnedPremiums = this.GrossEarnedPremiumTable(DateRange,
-                                                        PremiumTable.Result, CommutationDate);
-
-            var IncurredLosses = this.IncurredLossTable(DateRange,
-                                    IncurredLossTable.Result, CommutationDate);
-
-            var PaidLosses = this.PaidLossTable(DateRange, PaidLossTable.Result, CommutationDate);
-
-
-            await Task.WhenAll(GrossEarnedPremiums, IncurredLosses, PaidLosses);
-
-
-            //Calculation
-            var AcquisitionExpenseRate = GrossEarnedPremiums.Result.AsParallel()
-                                        .Select(g => g * (decimal) AcquisitonExpenseRate);
-
-
-            var CommissionExpense = SubtractListItems<decimal>(GrossEarnedPremiums.Result,
-                                                        AcquisitionExpenseRate).Select(s => s * (decimal) 1.5);
-
-            
-           
-
-            for(int iterator =0; iterator< (int) GrossEarnedPremiums.Result.Count(); iterator++)
-            {
-
-                
-
-                NetCededPremium.Add(GrossEarnedPremiums.Result.ElementAt(iterator) 
-                    - (AcquisitionExpenseRate.ElementAt(iterator) + CommissionExpense.ElementAt(iterator)));
-
-                if (iterator == 0)
-                {
-                    StartingFloat.Add(0);
-
-                    FloatChange.Add(NetCededPremium.ElementAt(iterator) - PaidLosses.Result.ElementAt(iterator));
-
-                    AverageInvestmentFloat.Add(Math.Max(StartingFloat.ElementAt(iterator) 
-                        + (decimal) 0.5*FloatChange.ElementAt(iterator), 0));
-
-                    InvestmentFloat.Add((decimal)Math.Pow(1, 1/365)*AverageInvestmentFloat.ElementAt(iterator));
-
-
-                    EndingFloat.Add(StartingFloat.ElementAt(iterator) 
-                        + FloatChange.ElementAt(iterator) + InvestmentFloat.ElementAt(iterator));
-
-                    continue;
-                }
-
-                StartingFloat.Add(EndingFloat.ElementAt(iterator-1));
-
-                FloatChange.Add((NetCededPremium.ElementAt(iterator) - NetCededPremium.ElementAt(iterator - 1)) -
-                                (PaidLosses.Result.ElementAt(iterator) - PaidLosses.Result.ElementAt(iterator)));
-
-                AverageInvestmentFloat.Add(Math.Max(StartingFloat.ElementAt(iterator)
-                        + (decimal)0.5 * FloatChange.ElementAt(iterator), 0));
-
-                InvestmentFloat.Add((decimal)Math.Pow(1, 1 / 365) * AverageInvestmentFloat.ElementAt(iterator));
-
-                EndingFloat.Add(StartingFloat.ElementAt(iterator)
-                    + FloatChange.ElementAt(iterator) + InvestmentFloat.ElementAt(iterator));
-
-            }
-
-
-            var CumulativeInvestmentIncome = CumulativeSum<decimal>(InvestmentFloat);
-
-            var MaxIncurrredLosses = IncurredLosses.Result.Max();
-            var MaxNetCededPremium = NetCededPremium.Max();
-
-
-            Parallel.For(0, (int)CumulativeInvestmentIncome.Count(), iterator =>
-            {
-
-
-
-                SubjectToProfitCommission.Add(
-
-                    Math.Min(NetCededPremium.ElementAt(iterator)
-                   - IncurredLosses.Result.ElementAt(iterator)
-                   + CumulativeInvestmentIncome.ElementAt(iterator),
-
-                    MaxIncurrredLosses - MaxNetCededPremium
-                    + CumulativeInvestmentIncome.ElementAt(iterator)
-                    ));
-
-                CumulativeCashflow.Add(
-
-                    NetCededPremium.ElementAt(iterator)
-                   - PaidLosses.Result.ElementAt(iterator)
-                   + CumulativeInvestmentIncome.ElementAt(iterator)
-
-                    );             
-
-            });
-          
-       
-            throw new NotImplementedException();
-        }
 
         //Returns the Gross Earned Premium over a given date range
         public async Task<IEnumerable<decimal>> GrossEarnedPremiumTable(
@@ -704,7 +534,7 @@ namespace CashflowModelling.Application.IRR.Service
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="StartDate"></param>
+        /// <param name="StartDate"> </param>
         /// <param name="EndDate"></param>
         /// <param name="CommutationDate"></param>
         /// <param name="PaidLossSchedules"></param>
@@ -746,11 +576,11 @@ namespace CashflowModelling.Application.IRR.Service
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="SPInvestorIds"></param>
+        /// <param name="SPInvestorId"></param>
         /// <param name="RetroProgramIds"></param>
         /// <returns></returns>
         //Get Paid Loss Schedule
-        public async Task<IEnumerable<PaidSchedule>> GetPaidLossSchedule(IEnumerable<int>? SPInvestorIds,
+        public async Task<IEnumerable<PaidSchedule>> GetPaidLossSchedule(int  SPInvestorId,
                                                                     IEnumerable<int>? RetroProgramIds)
         {
             return await _queryService.QuerySet<PaidSchedule>(_queryService.GetPaidLossQuery());
@@ -769,7 +599,7 @@ namespace CashflowModelling.Application.IRR.Service
         //Get Premium Table Inputs
         public async Task<IEnumerable<IRRPremiumInputDTO>> GetIRRPremiumInput(IEnumerable<int>? ids)
         {
-            FormattableString _queryString = ids.IsEmpty()
+            FormattableString _queryString = ids.IsNullOrEmpty()
                 ? $@"{_queryService.GetIRRPremiumString()} 
                      order by SPInvestor, RetroProfileId, 
                      RetroProgramId, LayerInception;"
@@ -788,37 +618,21 @@ namespace CashflowModelling.Application.IRR.Service
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="SPInvestorIds"></param>
+        /// <param name="SPInvestorId"></param>
         /// <param name="RetroProgramIds"></param>
         /// <returns></returns>
         //Get Premium Schedule
-        public async Task<IEnumerable<PremiumSchedule>> GetPremiumSchedule(IEnumerable<int>? SPInvestorIds,
+        public async Task<IEnumerable<PremiumSchedule>> GetPremiumSchedule(int SPInvestorId,
                                                                     IEnumerable<int>? RetroProgramIds)
         {
             return await _queryService.QuerySet<PremiumSchedule>(_queryService.GetPremiumScheduleQuery());
         }
 
         public async Task<IEnumerable<IRRPremiumInputDTO>> GetIRRPremiumInput(
-                                                                    IEnumerable<int>? SPInvestorIds, 
+                                                                    int SPInvestor, 
                                                                     IEnumerable<int>? RetroProgramIds)
         {
-            FormattableString SPInvestorIdstring =
-               RetroProgramIds.IsNullOrEmpty() ? $@"" :
-                (FormattableString)$@"where SPInvestor in 
-                                        ({string.Join(",", SPInvestorIds!)})";
-
-            FormattableString RetroProgramIdString =
-                RetroProgramIds.IsNullOrEmpty() ? $@"" :
-                (FormattableString)$@"and RetroProgramId 
-                                    in ({string.Join(",", RetroProgramIds!)})";
-
-
-            FormattableString _queryString = $@"{_queryService.GetIRRPremiumString()} 
-                                  {SPInvestorIdstring} {RetroProgramIdString}
-                                  order by RetroProfileId, SPInvestor, 
-                                  RetroProgramId, LayerInception;";
-
-            return await _queryService.QuerySet<IRRPremiumInputDTO>(_queryString);
+            return await _queryService.QuerySet<IRRPremiumInputDTO>(_queryService.GetIRRPremiumString());
         }
 
 

@@ -14,13 +14,15 @@ namespace CashflowModelling.Application.IRR.Service
         private readonly TDataType _dataType = Datatype;
 
 
-        public TResponseType GetAPIResponse()
+        public async Task<TResponseType> GetAPIResponse()
         {
 
             var SerializedObject = JsonSerializer.Serialize(this._dataType);
 
-            HttpClient client = new HttpClient();
-            client.BaseAddress = new Uri(this._apiURL);
+            HttpClient client = new()
+            {
+                BaseAddress = new Uri(this._apiURL)
+            };
 
             client.DefaultRequestHeaders.Accept.Add(
 
@@ -33,7 +35,7 @@ namespace CashflowModelling.Application.IRR.Service
 
             if (response.IsSuccessStatusCode) {
 
-                return JsonSerializer.DeserializeAsync<TResponseType>(response.Content.ReadAsStream()).Result! ;
+                return (await JsonSerializer.DeserializeAsync<TResponseType>(response.Content.ReadAsStream()).AsTask().ConfigureAwait(false))!;
 
             }
             else
