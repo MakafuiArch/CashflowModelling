@@ -1,6 +1,8 @@
 ﻿using Dapper;
 using Microsoft.Data.SqlClient;
 using CashflowModelling.Application.IRR.Interface;
+using CashflowModelling.Application.IRR.Service;
+using LanguageExt.ClassInstances;
 
 
 
@@ -274,6 +276,15 @@ namespace IRR_Model.Application.IRR.Service
             return await con.QueryAsync<T>(query.ToString());
 
 
+        }
+
+
+        public async Task<TResponseType> ApiResponseSet<TDataType, TResponseType>(String apiURL, TDataType datatype)
+             where TDataType : class, IConvertible where TResponseType : class, IConvertible
+        {
+            var Apiservice = new APIService<TDataType, TResponseType>(apiURL, datatype);
+
+            return await Task.FromResult(Apiservice.GetAPIResponse());
         }
 
         public FormattableString GetCapitalScheduleQuery() => _capitalQuery;

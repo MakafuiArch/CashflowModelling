@@ -18,7 +18,7 @@ namespace CashflowModelling.Controllers
         /// </summary>
         /// <param name="ids"> This parameter in the list of all the SPInvestorId</param>
         /// <returns>This returns an enumeration of all the Premium Schedules</returns>
-        [HttpPost("GetPremiums")]
+        [HttpPost("getpremiums")]
         public IEnumerable<IRRPremiumInputDTO> GetPremium([FromBody] List<int> ids)
         {
             IEnumerable<IRRPremiumInputDTO> PremiumInputs =  _irrService.GetIRRPremiumInput(ids).GetAwaiter().GetResult();
@@ -33,13 +33,23 @@ namespace CashflowModelling.Controllers
         /// <param name="ids"></param>
         /// <returns></returns>
         /// <exception cref="NotImplementedException"></exception>
-        [HttpPost("GetCashFlows")]
+        [HttpPost("getcashflows")]
         public DataFrame GetCashFlows([FromBody] List<int> ids)
         {
-
-
-
            throw new NotImplementedException();
+        }
+
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        [HttpPost("multiyear-spid")]
+        public decimal GetMultiYearIRRForSPInvestor()
+        {
+            throw new NotImplementedException();
         }
 
     }

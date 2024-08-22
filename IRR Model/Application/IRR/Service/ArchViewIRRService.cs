@@ -54,7 +54,7 @@ namespace CashflowModelling.Application.IRR.Service
 
 
 
-             var StartDateRange = Enumerable.Range(0, EndDate.Subtract(StartDate).Days + 1).
+            var StartDateRange = Enumerable.Range(0, EndDate.Subtract(StartDate).Days + 1).
                                    Select(days => StartDate.AddDays(days));
 
             var EndDateRange = StartDateRange.Select(date => date.AddDays(1));
@@ -67,7 +67,7 @@ namespace CashflowModelling.Application.IRR.Service
             //Read all the tables as IRR Inputs
 
             Task<IEnumerable<PremiumSchedule>> PremiumTable =
-                this.GetPremiumSchedule(RetroProgramIds, SPInvestorIds);
+                GetPremiumSchedule(RetroProgramIds, SPInvestorIds);
 
 
             Task<IEnumerable<PaidSchedule>> PaidLossTable = this.GetPaidLossSchedule(SPInvestorIds,
