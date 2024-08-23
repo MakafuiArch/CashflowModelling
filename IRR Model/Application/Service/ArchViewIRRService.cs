@@ -1,13 +1,13 @@
 ﻿using IRR.Domain.DTOs;
 using IRR.Application.Interface;
-using IRR.Application.Payload;
 using Microsoft.IdentityModel.Tokens;
 using System.Numerics;
 using Microsoft.Spark.Sql;
 using Microsoft.Spark.Sql.Types;
 using Microsoft.Spark.Sql.Expressions;
 using Excel.FinancialFunctions;
-
+using FluentValidation;
+using IRR.Application.Payload;
 
 namespace IRR.Application.Service
 {
@@ -19,6 +19,7 @@ namespace IRR.Application.Service
     {
 
         private readonly IQuery _queryService = queryService;
+        //private readonly IValidator<IRRInputs> _validator = validator;
 
         private static readonly Dictionary<string, StructField> DataFrameTableNames = new()
         {
@@ -29,23 +30,48 @@ namespace IRR.Application.Service
             { "Paid Losses", new StructField("Paid Losses", new DecimalType()) }
         };
 
-     
 
-        /// <summary>
-        /// This calculates the IRR over various retroprogrammes over multiple years
-        /// </summary>
-        /// <param name="input"></param>
-        /// <returns></returns>
-        /// <exception cref="NotImplementedException"></exception>
+
         public async Task<Dictionary<int, Tuple<DataFrame, double>>> GetIRRForSPInvestor(IRRInputs input)
         {
-            var StartDate = (DateTime)input.QuarterStartDate!;
+
+            var StartDate = (DateTime) input.QuarterStartDate!;
             var EndDate = (DateTime) input.QuarterEndDate!;
             var CommutationDate = input.CommutationDate;
             var RetroProgramIds = input.RetroProgramIds;
             var SPInvestorId = input.SPInvestorId;
             var Capital = input.Capital;
             var AcquisitionExpenseRate = input.AcquisitionExpense;
+
+
+            return await IRRCashFlow(StartDate, EndDate, CommutationDate, RetroProgramIds!, 
+                SPInvestorId, Capital, AcquisitionExpenseRate);
+
+        }
+
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="StartDate"></param>
+        /// <param name="EndDate"></param>
+        /// <param name="CommutationDate"></param>
+        /// <param name="RetroProgramIds"></param>
+        /// <param name="SPInvestorId"></param>
+        /// <param name="Capital"></param>
+        /// <param name="AcquisitionExpenseRate"></param>
+        /// <returns></returns>
+        public async Task<Dictionary<int, Tuple<DataFrame, double>>> IRRCashFlow(DateTime StartDate, 
+            DateTime EndDate, 
+            DateTime CommutationDate, 
+            IEnumerable<int> RetroProgramIds, 
+            int SPInvestorId, 
+            double Capital, 
+            double AcquisitionExpenseRate
+            
+            )
+        {
 
             var responseDictionary = new Dictionary<int, Tuple<DataFrame, double>>();
 
@@ -97,10 +123,6 @@ namespace IRR.Application.Service
 
                 return responseDictionary;
         }
-
-
-
-
 
 
 
@@ -279,8 +301,9 @@ namespace IRR.Application.Service
 
             var CashflowDate = IRRTable.Select("Period Start Date").Collect().Select(row => Convert.ToDateTime(row.Get(0)));
 
+
             
-            return new Tuple<DataFrame, double>( IRRTable, Financial.XIrr(Cashflow, CashflowDate) ) ;
+            return new Tuple<DataFrame, double>( IRRTable.ToJSON(), Financial.XIrr(Cashflow, CashflowDate) ) ;
 
         }
 

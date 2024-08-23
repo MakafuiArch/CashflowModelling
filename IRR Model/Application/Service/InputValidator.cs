@@ -12,11 +12,19 @@ namespace IRR.Application.Service
 
 
 
-            RuleSet("default", () =>
+            RuleSet("mulitiyear", () =>
             {
 
                 RuleFor(x => x.QuarterStartDate).NotNull();
                 RuleFor(x => x.CommutationDate).NotNull();
+                RuleFor(x => x.SPInvestorId).NotNull();
+                RuleFor(x => x.QuarterStartDate).LessThan(day => day.QuarterEndDate);
+
+            });
+
+            RuleSet("singleyear", () =>
+            {
+
 
 
             });

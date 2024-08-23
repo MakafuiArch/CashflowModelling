@@ -1,4 +1,6 @@
-﻿using IRR.Application.Interface;
+﻿using IRR.Application.Payload;
+using FluentValidation;
+using IRR.Application.Interface;
 using IRR.Application.Service;
 using IRR.Domain.DBContext;
 using IRR.Infrastructure.Interface;
@@ -26,11 +28,12 @@ namespace IRR.Infrastructure
             builder.Services.Configure<IQueryService>(builder.Configuration.GetSection("ConnectionString"));
             builder.Services.AddSingleton<IQuery, IQueryService>();
             builder.Services.AddSingleton<IIRR, ArchViewIRRService>();
+            //builder.Services.AddSingleton<IValidator<IRRInputs>, InputValidator>;
 
             // Add services to the container.
 
             builder.Services.AddControllers();
-            // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+            
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
@@ -39,6 +42,7 @@ namespace IRR.Infrastructure
                 );
 
 
+            
 
 
             builder.Services.AddSwaggerGen(config =>

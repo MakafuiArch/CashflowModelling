@@ -11,7 +11,7 @@ namespace IRR.Infrastructure
         public async Task StartAsync(string[] args)
         {
 
-            ConfigurationBuilder configurationBuilder = new();
+            ConfigurationBuilder configurationBuilder = new ConfigurationBuilder();
             IConfiguration c = configurationBuilder.AddJsonFile("appsettings.json").AddEnvironmentVariables().Build();
 
             var builder = WebApplication.CreateBuilder(args);

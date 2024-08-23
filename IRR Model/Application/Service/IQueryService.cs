@@ -2,7 +2,6 @@
 using Microsoft.Data.SqlClient;
 using IRR.Application.Interface;
 using IRR.Application.Service;
-using LanguageExt.ClassInstances;
 
 
 

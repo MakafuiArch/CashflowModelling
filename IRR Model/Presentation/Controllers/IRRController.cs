@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using IRR.Domain.DTOs;
 using IRR.Application.Interface;
-using Microsoft.Data.Analysis;
+using IRR.Application.Payload;
+using Microsoft.Spark.Sql;
+using LanguageExt.Pipes;
 
 namespace IRR.Presentation.Controllers
 {
@@ -16,9 +18,11 @@ namespace IRR.Presentation.Controllers
         /// <summary>
         /// Get the Premium Schedule for all Special Purpose Vehichle Investor Id  (SPInvestorId) specified
         /// </summary>
-        /// <param name="ids"> This parameter in the list of all the SPInvestorId</param>
+        /// <param name="ids"> Special Purpose Vehicle Investor Ids</param>
         /// <returns>This returns an enumeration of all the Premium Schedules</returns>
         [HttpPost("getpremiums")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
         public IEnumerable<IRRPremiumInputDTO> GetPremium([FromBody] List<int> ids)
         {
             IEnumerable<IRRPremiumInputDTO> PremiumInputs = _irrService.GetIRRPremiumInput(ids).GetAwaiter().GetResult();
@@ -30,14 +34,13 @@ namespace IRR.Presentation.Controllers
         /// <summary>
         /// 
         /// </summary>
-        /// <param name="ids"></param>
+        /// <param name="Inputs"></param>
         /// <returns></returns>
         /// <exception cref="NotImplementedException"></exception>
-        [HttpPost("getcashflows")]
-        public DataFrame GetCashFlows([FromBody] List<int> ids)
-        {
-            throw new NotImplementedException();
-        }
+        [HttpPost("get-cashflows-for-investor")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public DataFrame GetCashFlows([FromBody] IRRInputs Inputs) => _irrService.GetIRRForSPInvestor(Inputs).Result[Inputs.SPInvestorId].Item1;
 
 
 
@@ -47,9 +50,11 @@ namespace IRR.Presentation.Controllers
         /// <returns></returns>
         /// <exception cref="NotImplementedException"></exception>
         [HttpPost("multiyear-spid")]
-        public decimal GetMultiYearIRRForSPInvestor()
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public double GetMultiYearIRRForSPInvestor([FromBody] IRRInputs Inputs)
         {
-            throw new NotImplementedException();
+           return _irrService.GetIRRForSPInvestor(Inputs).Result[Inputs.SPInvestorId].Item2;
         }
 
     }

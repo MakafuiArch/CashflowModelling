@@ -1,15 +1,8 @@
-﻿
-
-
-global using DateTuple = (System.DateTime StartDate, System.DateTime EndDate);
+﻿global using DateTuple = (System.DateTime StartDate, System.DateTime EndDate);
 global using LossPremTuple = (System.DateTime StartDate, decimal LossPremValue);
-
+using IRR.Application.Payload;
 using IRR.Domain.DTOs;
 using Microsoft.Spark.Sql;
-
-using IRR.Application.Payload;
-
-
 
 
 namespace IRR.Application.Interface
@@ -28,12 +21,20 @@ namespace IRR.Application.Interface
                                                                     IEnumerable<int>? RetroProgramIds);
         Task<IEnumerable<IRRLossSchedule>> GetIRRLossSchedule(double ClimateLoading);
 
-        Task<Dictionary<int, Tuple<DataFrame, double>>> GetIRRForSPInvestor(IRRInputs input);
-
         Task<IEnumerable<CapitalSchedule>> GetCapitalSchedule();
 
         Decimal GrossEarnedPremium(DateTime StartDate, 
             DateTime EndDate, DateTime CommutationDate, IEnumerable<PremiumSchedule> IRRPremiumTable);
+
+        Task<Dictionary<int, Tuple<DataFrame, double>>> IRRCashFlow(DateTime StartDate,
+            DateTime EndDate,
+            DateTime CommutationDate,
+            IEnumerable<int> RetroProgramIds,
+            int SPInvestorId,
+            double Capital,
+            double AcquisitionExpenseRate
+
+            );
 
         Decimal CurrentIncurredLoss(DateTime StartDate,
             DateTime EndDate, DateTime CommutationDate, IEnumerable<IRRLossSchedule> IRRLossSchedules);
@@ -44,6 +45,6 @@ namespace IRR.Application.Interface
 
         Task<IEnumerable<Decimal>> IncurredLossTable(IEnumerable<DateTuple> DateRange,
             IEnumerable<IRRLossSchedule> IRRLossTable, DateTime CommutationDate);
-
+        Task<Dictionary<int, Tuple<DataFrame, double>>> GetIRRForSPInvestor(IRRInputs input);
     }
 }

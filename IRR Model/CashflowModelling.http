@@ -1,6 +1,6 @@
-@IRR_HostAddress = http://localhost:5252
+@IRR_Model_HostAddress = http://localhost:5252
 
-GET {{IRR_HostAddress}}/weatherforecast/
+GET {{IRR_Model_HostAddress}}/weatherforecast/
 Accept: application/json
 
 ###
