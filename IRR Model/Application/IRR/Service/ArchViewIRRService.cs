@@ -8,8 +8,6 @@ using Microsoft.Spark.Sql.Types;
 using Microsoft.Spark.Sql.Expressions;
 using Excel.FinancialFunctions;
 using IRR_Model.Domain.IRR.DTOs;
-using Microsoft.EntityFrameworkCore.Metadata;
-
 
 
 namespace CashflowModelling.Application.IRR.Service
@@ -47,7 +45,8 @@ namespace CashflowModelling.Application.IRR.Service
             var CommutationDate = input.CommutationDate;
             var RetroProgramIds = input.RetroProgramIds;
             var SPInvestorId = input.SPInvestorId;
-
+            var Capital = input.Capital;
+            var AcquisitionExpenseRate = input.AcquisitionExpense;
 
             var responseDictionary = new Dictionary<int, Tuple<DataFrame, double>>();
 
@@ -90,7 +89,8 @@ namespace CashflowModelling.Application.IRR.Service
 
 
                 var dataframeIRRResponse = await ComputeIRR(PremiumTable.Result, PaidLossTable.Result,
-                                        IncurredLossTable.Result, CapitalTable.Result, input, DateRange);
+                                        IncurredLossTable.Result, CapitalTable.Result, (decimal) Capital,
+                                        CommutationDate, (decimal) AcquisitionExpenseRate, DateRange);
 
                 responseDictionary.Add(SPInvestorId, dataframeIRRResponse);
 
@@ -108,18 +108,20 @@ namespace CashflowModelling.Application.IRR.Service
         /// <param name="PaidLossTable"></param>
         /// <param name="IncurredLossTable"></param>
         /// <param name="CapitalTable"></param>
-        /// <param name="input"></param>
+        /// <param name="Capital"></param>
+        /// <param name="CommutationDate"></param>
+        /// <param name="AcquisitonExpenseRate"></param>
         /// <param name="DateRange"></param>
         /// <returns></returns>
         private async Task<Tuple<DataFrame, double>> ComputeIRR(IEnumerable<PremiumSchedule> PremiumTable, 
                                             IEnumerable<PaidSchedule> PaidLossTable, 
                                             IEnumerable<IRRLossSchedule> IncurredLossTable, 
                                             IEnumerable<CapitalSchedule> CapitalTable,
-                                            IRRInputs input, 
+                                            Decimal Capital,
+                                            DateTime CommutationDate, 
+                                            Decimal AcquisitonExpenseRate,
                                             IEnumerable<DateTuple> DateRange)
         {
-            var CommutationDate = input.CommutationDate;
-            var AcquisitonExpenseRate = input.AcquisitionExpense;
             var CommissionRate = 1;
             var ProfitCommission = 0.35;
             var HurdleAmount = 0;
@@ -252,9 +254,23 @@ namespace CashflowModelling.Application.IRR.Service
 
 
 
+            IRRTable.WithColumn("Buffer Factor", Functions.Lit(1.25));
+
+
+            IRRTable.WithColumn("Buffer Reserves", IRRTable.Col("Upaid Losses") * IRRTable.Col("Buffer Factor"));
+
+
+            IRRTable.WithColumn("Required Capital", Functions.Greatest(IRRTable.Col("Buffer Reserves"), Functions.Lit(Capital)));
+
+
+            IRRTable.WithColumn("Capital Released", Functions.Greatest(IRRTable.Col("Investors Funds") - IRRTable.Col("Required Capital"),
+                                 Functions.Lit(0)));
+
             //This is dummy. Please change later
 
-            IRRTable.WithColumn("Investor Cashflow", IRRTable.Col("Investors funds").Multiply(IRRTable.Col("IsCommutable")));
+            IRRTable.WithColumn("Investor Cashflow", (IRRTable.Col("Capital Released")
+                               - IRRTable.Col("Capital Contribution") - Functions.Lag(IRRTable.Col("Capital Released"),
+                               1, Functions.Lit(0))).Multiply(IRRTable.Col("IsCommutable")));
 
             var Cashflow = IRRTable.Select("Investor Cashflow").Collect().Select(row => (double) Convert.ToDecimal(row.Get(0)));
 
@@ -403,6 +419,10 @@ namespace CashflowModelling.Application.IRR.Service
             return Table.WithColumn(ColumnName, newColumnDf.Col(ColumnName));
 
         }
+
+
+
+
 
 
 
