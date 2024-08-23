@@ -31,8 +31,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Application\IRR\Exceptions\" />
-    <Folder Include="Domain\IRR\DBContext\" />
+    <Folder Include="Application\Exceptions\" />
+    <Folder Include="Domain\DBContext\" />
   </ItemGroup>
 
 	
