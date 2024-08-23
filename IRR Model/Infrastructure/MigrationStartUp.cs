@@ -1,17 +1,17 @@
-﻿using CashflowModelling.Infrastructure.Interface;
-using CashflowModelling.Domain.IRR.DBContext;
+﻿using IRR.Infrastructure.Interface;
+using IRR.Domain.IRR.DBContext;
 using Microsoft.EntityFrameworkCore;
-using Stact;
 
 
-namespace CashflowModelling.Infrastructure
+
+namespace IRR.Infrastructure
 {
     public class MigrationStartUp : IStartUp
     {
         public async Task StartAsync(string[] args)
         {
 
-            ConfigurationBuilder configurationBuilder = new ConfigurationBuilder();
+            ConfigurationBuilder configurationBuilder = new();
             IConfiguration c = configurationBuilder.AddJsonFile("appsettings.json").AddEnvironmentVariables().Build();
 
             var builder = WebApplication.CreateBuilder(args);

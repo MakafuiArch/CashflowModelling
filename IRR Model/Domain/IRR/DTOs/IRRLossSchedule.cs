@@ -1,4 +1,4 @@
-﻿namespace CashflowModelling.Domain.IRR.DTOs
+﻿namespace IRR.Domain.IRR.DTOs
 {
     public class IRRLossSchedule(int RetroProfileId, 
         int RetroProgramId,

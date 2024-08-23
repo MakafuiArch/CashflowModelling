@@ -1,4 +1,4 @@
-﻿namespace CashflowModelling.Application.IRR.Interface
+﻿namespace IRR.Application.IRR.Interface
 {
     public interface IQuery
     {

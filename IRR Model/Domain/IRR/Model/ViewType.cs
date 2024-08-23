@@ -1,4 +1,4 @@
-﻿namespace CashflowModelling.Domain.IRR.Model
+﻿namespace IRR.Domain.IRR.Model
 {
 
     enum ViewType: Byte

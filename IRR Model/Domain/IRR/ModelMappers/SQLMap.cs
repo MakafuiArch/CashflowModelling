@@ -1,7 +1,7 @@
 ﻿using Microsoft.Data.SqlClient;
 using System.Reflection;
 
-namespace CashflowModelling.Domain.IRR.ModelMappers
+namespace IRR.Domain.IRR.ModelMappers
 {
     public class SQLMap
     {

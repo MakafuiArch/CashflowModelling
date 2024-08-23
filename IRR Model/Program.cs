@@ -1,4 +1,4 @@
-using CashflowModelling.Infrastructure;
+using IRR.Infrastructure;
 using Microsoft.AspNetCore.Hosting.Builder;
 
 public static class Program

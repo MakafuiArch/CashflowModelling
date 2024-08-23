@@ -1,13 +1,13 @@
 ﻿global using DateTuple = (System.DateTime StartDate, System.DateTime EndDate);
 global using LossPremTuple = (System.DateTime StartDate, decimal LossPremValue);
 
-using CashflowModelling.Domain.IRR.DTOs;
-using CashflowModelling.Application.IRR.Payload;
-using IRR_Model.Domain.IRR.DTOs;
+using IRR.Domain.IRR.DTOs;
+using IRR.Application.IRR.Payload;
 
 
 
-namespace CashflowModelling.Application.IRR.Interface
+
+namespace IRR.Application.IRR.Interface
 {
     
     

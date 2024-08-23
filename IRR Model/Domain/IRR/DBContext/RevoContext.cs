@@ -1,10 +1,10 @@
 ﻿
-using CashflowModelling.Domain.IRR.Model;
+using IRR.Domain.IRR.Model;
 using Microsoft.EntityFrameworkCore;
 
 
 
-namespace CashflowModelling.Domain.IRR.DBContext
+namespace IRR.Domain.IRR.DBContext
 {
 
     public partial class RevoContext : DbContext

@@ -1,4 +1,4 @@
-﻿namespace CashflowModelling.Domain.IRR.ModelMappers
+﻿namespace IRR.Domain.IRR.ModelMappers
 {
     [AttributeUsage(AttributeTargets.Property, Inherited = true)]
     [Serializable]

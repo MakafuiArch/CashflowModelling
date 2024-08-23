@@ -1,6 +1,6 @@
-﻿using CashflowModelling.Domain.IRR.ModelMappers;
+﻿using IRR.Domain.IRR.ModelMappers;
 
-namespace CashflowModelling.Domain.IRR.DTOs
+namespace IRR.Domain.IRR.DTOs
 {
 
     [Serializable]

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace CashflowModelling.Domain.IRR.Model;
+namespace IRR.Domain.IRR.Model;
 
 public partial class RoeCapitalResult
 {

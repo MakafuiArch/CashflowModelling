@@ -1,15 +1,11 @@
-﻿using FluentNHibernate.Cfg.Db;
-using FluentNHibernate.Cfg;
-using NHibernate.Cfg;
+﻿
 
-
-
-namespace CashflowModelling.Persistence.IRR
+namespace IRR.Persistence.IRR
 {
     public class FluentMapperConfigurer
     {
       
-        public void Config(Configuration nhCfg)
+        public void Config()
         {
             //var mySqlConfiguration = MsSqlConfiguration.MsSql2012.ConnectionString("DbConnectionString");
             //Fluently.Configure(nhCfg)

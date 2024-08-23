@@ -1,6 +1,6 @@
-﻿using CashflowModelling.Infrastructure.Interface;
+﻿using IRR.Infrastructure.Interface;
 
-namespace CashflowModelling.Infrastructure
+namespace IRR.Infrastructure
 {
     public class StartFactory
     {

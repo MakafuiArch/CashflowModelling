@@ -1,4 +1,4 @@
-﻿namespace IRR_Model.Domain.IRR.DTOs
+﻿namespace IRR.Domain.IRR.DTOs
 {
     public class BufferSchedule(int id, float BufferFactor, DateTime BufferDate)
     {

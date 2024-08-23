@@ -1,12 +1,12 @@
 ﻿using Dapper;
 using Microsoft.Data.SqlClient;
-using CashflowModelling.Application.IRR.Interface;
-using CashflowModelling.Application.IRR.Service;
+using IRR.Application.IRR.Interface;
+using IRR.Application.IRR.Service;
 using LanguageExt.ClassInstances;
 
 
 
-namespace IRR_Model.Application.IRR.Service
+namespace IRR.Application.IRR.Service
 {
     public class IQueryService(IConfiguration configuration) : IQuery
     {

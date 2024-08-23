@@ -1,6 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 
-namespace CashflowModelling.Infrastructure.Interface
+namespace IRR.Infrastructure.Interface
 {
     public interface IStartUp
     {

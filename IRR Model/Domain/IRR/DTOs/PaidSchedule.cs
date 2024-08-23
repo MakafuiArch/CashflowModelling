@@ -1,4 +1,4 @@
-﻿namespace CashflowModelling.Domain.IRR.DTOs
+﻿namespace IRR.Domain.IRR.DTOs
 {
     [Serializable]
     public class PaidSchedule(int RetroProfileId, int RetroProgramId,

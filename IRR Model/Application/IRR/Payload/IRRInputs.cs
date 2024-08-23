@@ -1,8 +1,8 @@
-﻿using IRR_Model.Domain.IRR.DTOs;
+﻿using IRR.Domain.IRR.DTOs;
 using LanguageExt;
 
 
-namespace CashflowModelling.Application.IRR.Payload
+namespace IRR.Application.IRR.Payload
 {
     public record IRRInputs(
         int Duration,

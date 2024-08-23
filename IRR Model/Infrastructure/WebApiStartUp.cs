@@ -1,13 +1,12 @@
-﻿using CashflowModelling.Application.IRR.Interface;
-using CashflowModelling.Application.IRR.Service;
-using CashflowModelling.Domain.IRR.DBContext;
-using CashflowModelling.Infrastructure.Interface;
-using IRR_Model.Application.IRR.Service;
+﻿using IRR.Application.IRR.Interface;
+using IRR.Application.IRR.Service;
+using IRR.Domain.IRR.DBContext;
+using IRR.Infrastructure.Interface;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using System.Reflection;
 
-namespace CashflowModelling.Infrastructure
+namespace IRR.Infrastructure
 {
     public class WebApiStartUp : IStartUp
     {

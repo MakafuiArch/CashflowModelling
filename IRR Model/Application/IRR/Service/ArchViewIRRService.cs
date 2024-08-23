@@ -1,16 +1,15 @@
-﻿using CashflowModelling.Domain.IRR.DTOs;
-using CashflowModelling.Application.IRR.Interface;
-using CashflowModelling.Application.IRR.Payload;
+﻿using IRR.Domain.IRR.DTOs;
+using IRR.Application.IRR.Interface;
+using IRR.Application.IRR.Payload;
 using Microsoft.IdentityModel.Tokens;
 using System.Numerics;
 using Microsoft.Spark.Sql;
 using Microsoft.Spark.Sql.Types;
 using Microsoft.Spark.Sql.Expressions;
 using Excel.FinancialFunctions;
-using IRR_Model.Domain.IRR.DTOs;
 
 
-namespace CashflowModelling.Application.IRR.Service
+namespace IRR.Application.IRR.Service
 {
 
     using DataFrameRow = (DateTime StartDate, DateTime EndDate,

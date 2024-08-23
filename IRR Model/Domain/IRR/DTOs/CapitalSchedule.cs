@@ -1,4 +1,4 @@
-﻿namespace IRR_Model.Domain.IRR.DTOs
+﻿namespace IRR.Domain.IRR.DTOs
 {
     public class CapitalSchedule(int Id, decimal IncrementalCapitalAdded, DateTime date)
     {
