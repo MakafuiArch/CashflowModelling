@@ -1,13 +1,18 @@
-﻿global using DateTuple = (System.DateTime StartDate, System.DateTime EndDate);
+﻿
+
+
+global using DateTuple = (System.DateTime StartDate, System.DateTime EndDate);
 global using LossPremTuple = (System.DateTime StartDate, decimal LossPremValue);
 
-using IRR.Domain.IRR.DTOs;
-using IRR.Application.IRR.Payload;
+using IRR.Domain.DTOs;
+using Microsoft.Spark.Sql;
+
+using IRR.Application.Payload;
 
 
 
 
-namespace IRR.Application.IRR.Interface
+namespace IRR.Application.Interface
 {
     
     
@@ -22,6 +27,8 @@ namespace IRR.Application.IRR.Interface
         Task<IEnumerable<PaidSchedule>> GetPaidLossSchedule(int SPInvestorId,
                                                                     IEnumerable<int>? RetroProgramIds);
         Task<IEnumerable<IRRLossSchedule>> GetIRRLossSchedule(double ClimateLoading);
+
+        Task<Dictionary<int, Tuple<DataFrame, double>>> GetIRRForSPInvestor(IRRInputs input);
 
         Task<IEnumerable<CapitalSchedule>> GetCapitalSchedule();
 

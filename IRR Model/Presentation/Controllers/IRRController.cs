@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
-using IRR.Domain.IRR.DTOs;
-using IRR.Application.IRR.Interface;
+using IRR.Domain.DTOs;
+using IRR.Application.Interface;
 using Microsoft.Data.Analysis;
 
 namespace IRR.Presentation.Controllers

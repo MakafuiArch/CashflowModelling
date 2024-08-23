@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace IRR.Domain.IRR.Model;
+namespace IRR.Domain.Model;
 
 public partial class RolePermission
 {

@@ -1,4 +1,4 @@
-﻿namespace IRR.Domain.IRR.DTOs
+﻿namespace IRR.Domain.DTOs
 {
     [Serializable]
     public class PaidSchedule(int RetroProfileId, int RetroProgramId,

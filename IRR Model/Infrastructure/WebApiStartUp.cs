@@ -1,6 +1,6 @@
-﻿using IRR.Application.IRR.Interface;
-using IRR.Application.IRR.Service;
-using IRR.Domain.IRR.DBContext;
+﻿using IRR.Application.Interface;
+using IRR.Application.Service;
+using IRR.Domain.DBContext;
 using IRR.Infrastructure.Interface;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;

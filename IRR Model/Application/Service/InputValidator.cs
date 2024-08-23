@@ -1,8 +1,8 @@
-﻿using IRR.Application.IRR.Payload;
+﻿using IRR.Application.Payload;
 using FluentValidation;
 
 
-namespace IRR.Application.IRR.Service
+namespace IRR.Application.Service
 {
     public class InputValidator: AbstractValidator<IRRInputs>
     {

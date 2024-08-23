@@ -1,4 +1,4 @@
-﻿namespace IRR.Application.IRR.Interface
+﻿namespace IRR.Application.Interface
 {
     public interface IQuery
     {

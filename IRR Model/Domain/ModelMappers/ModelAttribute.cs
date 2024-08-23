@@ -1,4 +1,4 @@
-﻿namespace IRR.Domain.IRR.ModelMappers
+﻿namespace IRR.Domain.ModelMappers
 {
     [AttributeUsage(AttributeTargets.Property, Inherited = true)]
     [Serializable]

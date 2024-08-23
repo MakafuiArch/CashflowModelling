@@ -1,8 +1,8 @@
-﻿using IRR.Domain.IRR.DTOs;
+﻿using IRR.Domain.DTOs;
 using LanguageExt;
 
 
-namespace IRR.Application.IRR.Payload
+namespace IRR.Application.Payload
 {
     public record IRRInputs(
         int Duration,

@@ -1,5 +1,5 @@
 ﻿
-namespace IRR.Domain.IRR.DTOs
+namespace IRR.Domain.DTOs
 {
     [Serializable]
     public class PremiumSchedule(int RetroProfileId, int RetroProgramId,

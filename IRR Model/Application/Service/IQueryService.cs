@@ -1,12 +1,12 @@
 ﻿using Dapper;
 using Microsoft.Data.SqlClient;
-using IRR.Application.IRR.Interface;
-using IRR.Application.IRR.Service;
+using IRR.Application.Interface;
+using IRR.Application.Service;
 using LanguageExt.ClassInstances;
 
 
 
-namespace IRR.Application.IRR.Service
+namespace IRR.Application.Service
 {
     public class IQueryService(IConfiguration configuration) : IQuery
     {

@@ -1,5 +1,5 @@
 ﻿using IRR.Infrastructure.Interface;
-using IRR.Domain.IRR.DBContext;
+using IRR.Domain.DBContext;
 using Microsoft.EntityFrameworkCore;
 
 

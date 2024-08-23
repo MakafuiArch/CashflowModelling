@@ -1,5 +1,5 @@
 ﻿
-namespace IRR.Domain.IRR.Model;
+namespace IRR.Domain.Model;
 
 public partial class Programme
 {

@@ -3,7 +3,7 @@ using System.Net.Http.Headers;
 
 
 
-namespace IRR.Application.IRR.Service
+namespace IRR.Application.Service
 {
     public class APIService<TDataType, TResponseType>(string ApiURL, TDataType Datatype) 
         where TDataType : class, IConvertible where TResponseType : class, IConvertible

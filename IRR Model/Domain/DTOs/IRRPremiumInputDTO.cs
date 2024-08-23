@@ -1,6 +1,6 @@
-﻿using IRR.Domain.IRR.ModelMappers;
+﻿using IRR.Domain.ModelMappers;
 
-namespace IRR.Domain.IRR.DTOs
+namespace IRR.Domain.DTOs
 {
 
     [Serializable]

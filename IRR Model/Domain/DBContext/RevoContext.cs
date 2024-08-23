@@ -1,10 +1,10 @@
 ﻿
-using IRR.Domain.IRR.Model;
+using IRR.Domain.Model;
 using Microsoft.EntityFrameworkCore;
 
 
 
-namespace IRR.Domain.IRR.DBContext
+namespace IRR.Domain.DBContext
 {
 
     public partial class RevoContext : DbContext

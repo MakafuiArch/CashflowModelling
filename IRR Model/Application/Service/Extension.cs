@@ -1,4 +1,4 @@
-﻿namespace IRR.Application.IRR.Service
+﻿namespace IRR.Application.Service
 {
     public static class Extension
     {

@@ -1,4 +1,4 @@
-﻿namespace IRR.Domain.IRR.Model
+﻿namespace IRR.Domain.Model
 {
 
     enum ViewType: Byte

@@ -1,6 +1,6 @@
-﻿using IRR.Domain.IRR.DTOs;
-using IRR.Application.IRR.Interface;
-using IRR.Application.IRR.Payload;
+﻿using IRR.Domain.DTOs;
+using IRR.Application.Interface;
+using IRR.Application.Payload;
 using Microsoft.IdentityModel.Tokens;
 using System.Numerics;
 using Microsoft.Spark.Sql;
@@ -9,7 +9,7 @@ using Microsoft.Spark.Sql.Expressions;
 using Excel.FinancialFunctions;
 
 
-namespace IRR.Application.IRR.Service
+namespace IRR.Application.Service
 {
 
     using DataFrameRow = (DateTime StartDate, DateTime EndDate,
@@ -97,6 +97,10 @@ namespace IRR.Application.IRR.Service
 
                 return responseDictionary;
         }
+
+
+
+
 
 
 

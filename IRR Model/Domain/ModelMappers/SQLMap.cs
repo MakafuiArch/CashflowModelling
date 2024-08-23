@@ -1,7 +1,7 @@
 ﻿using Microsoft.Data.SqlClient;
 using System.Reflection;
 
-namespace IRR.Domain.IRR.ModelMappers
+namespace IRR.Domain.ModelMappers
 {
     public class SQLMap
     {
