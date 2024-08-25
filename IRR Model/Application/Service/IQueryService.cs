@@ -2,6 +2,8 @@
 using Microsoft.Data.SqlClient;
 using IRR.Application.Interface;
 using IRR.Application.Service;
+using System.Runtime.InteropServices;
+using LanguageExt;
 
 
 
@@ -270,10 +272,23 @@ namespace IRR.Application.Service
         public async Task<IEnumerable<T>> QuerySet<T>(FormattableString query)
         {
 
-            using var con = new SqlConnection(_configuration.GetValue<string>("ConnectionString:Revoreader"));
+            var con = new SqlConnection(_configuration.GetValue<string>("ConnectionString:Revoreader"));
 
-            return await con.QueryAsync<T>(query.ToString());
+            try
+            { 
+                return await con.QueryAsync<T>(query.ToString());
 
+            }
+            catch (SqlException exception)
+            {
+
+                throw new Exception(exception.Message);
+
+            }
+            finally
+            {
+              con.Close();
+            }
 
         }
 

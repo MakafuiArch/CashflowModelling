@@ -4,6 +4,7 @@ using IRR.Application.Interface;
 using IRR.Application.Payload;
 using Microsoft.Spark.Sql;
 using LanguageExt.Pipes;
+using Microsoft.Data.SqlClient;
 
 namespace IRR.Presentation.Controllers
 {
@@ -23,6 +24,8 @@ namespace IRR.Presentation.Controllers
         [HttpPost("getpremiums")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesErrorResponseType(typeof(SqlException))]
         public IEnumerable<IRRPremiumInputDTO> GetPremium([FromBody] List<int> ids)
         {
             IEnumerable<IRRPremiumInputDTO> PremiumInputs = _irrService.GetIRRPremiumInput(ids).GetAwaiter().GetResult();
@@ -40,6 +43,8 @@ namespace IRR.Presentation.Controllers
         [HttpPost("get-cashflows-for-investor")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesErrorResponseType(typeof(SqlException))]
         public DataFrame GetCashFlows([FromBody] IRRInputs Inputs) => _irrService.GetIRRForSPInvestor(Inputs).Result[Inputs.SPInvestorId].Item1;
 
 
@@ -52,6 +57,8 @@ namespace IRR.Presentation.Controllers
         [HttpPost("multiyear-spid")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ProducesErrorResponseType(typeof(SqlException))]
         public double GetMultiYearIRRForSPInvestor([FromBody] IRRInputs Inputs)
         {
            return _irrService.GetIRRForSPInvestor(Inputs).Result[Inputs.SPInvestorId].Item2;

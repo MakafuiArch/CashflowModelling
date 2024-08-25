@@ -1,5 +1,4 @@
-﻿using IRR.Application.Payload;
-using FluentValidation;
+﻿using IRR.Application.Exceptions;
 using IRR.Application.Interface;
 using IRR.Application.Service;
 using IRR.Domain.DBContext;
@@ -28,6 +27,10 @@ namespace IRR.Infrastructure
             builder.Services.Configure<IQueryService>(builder.Configuration.GetSection("ConnectionString"));
             builder.Services.AddSingleton<IQuery, IQueryService>();
             builder.Services.AddSingleton<IIRR, ArchViewIRRService>();
+            builder.Services.AddExceptionHandler<IRRExceptionHandler>();
+            builder.Services.AddExceptionHandler<SQLExceptionHandler>();
+
+
             //builder.Services.AddSingleton<IValidator<IRRInputs>, InputValidator>;
 
             // Add services to the container.
@@ -87,6 +90,8 @@ namespace IRR.Infrastructure
 
 
             }
+
+            app.UseExceptionHandler(_ => { });
 
             app.UseHttpsRedirection();
 
