@@ -4,11 +4,13 @@ namespace IRR.Application.Exceptions
 {
     public class IRRExceptionHandler(ILogger<IRRExceptionHandler> logger): IExceptionHandler
     {
+        private readonly ILogger<IRRExceptionHandler> Logger  = logger;
+
         public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, 
             Exception exception, CancellationToken cancellationToken)
         {
 
-            logger.LogError(exception, exception.Message, cancellationToken);
+            Logger.LogError(exception, exception.Message, cancellationToken);
 
             var response = new ErrorResponse(StatusCodes.Status500InternalServerError, "Bad Request", exception.Message);
 

@@ -9,10 +9,9 @@ using LanguageExt;
 
 namespace IRR.Application.Service
 {
-    public class IQueryService(IConfiguration configuration) : IQuery
+    public class IQueryService() : IQuery
     {
 
-        private readonly IConfiguration _configuration = configuration;
 
         public FormattableString GetIRRLossScheduleQuery(double ClimateLoading) => $@"
 

@@ -8,6 +8,7 @@ using Microsoft.Spark.Sql.Expressions;
 using Excel.FinancialFunctions;
 using FluentValidation;
 using IRR.Application.Payload;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace IRR.Application.Service
 {
@@ -15,11 +16,13 @@ namespace IRR.Application.Service
     using DataFrameRow = (DateTime StartDate, DateTime EndDate,
         Decimal GrossEarnedPremium, Decimal IncurredLoss, Decimal PaidLoss);
 
-    public partial class ArchViewIRRService(IQuery queryService) : IIRR
+    public partial class ArchViewIRRService(IQuery queryService /*, IMemoryCache memoryCache */) : IIRR
     {
 
         private readonly IQuery _queryService = queryService;
         //private readonly IValidator<IRRInputs> _validator = validator;
+
+        //private readonly IMemoryCache _memoryCache = memoryCache;
 
         private static readonly Dictionary<string, StructField> DataFrameTableNames = new()
         {
@@ -453,7 +456,7 @@ namespace IRR.Application.Service
 
 
         //Returns the Gross Earned Premium over a given date range
-        public async Task<IEnumerable<decimal>> GrossEarnedPremiumTable(
+        private async Task<IEnumerable<decimal>> GrossEarnedPremiumTable(
             IEnumerable<DateTuple> DateRange, 
             IEnumerable<PremiumSchedule> IRRPremiumTable, DateTime CommutationDate)
         {
@@ -472,7 +475,7 @@ namespace IRR.Application.Service
         /// <param name="CommutationDate"></param>
         /// <returns></returns>
         //Returns the cumulative incurred loss for all given date ranges
-        public async Task<IEnumerable<decimal>> IncurredLossTable(IEnumerable<DateTuple> DateRange,
+        private async Task<IEnumerable<decimal>> IncurredLossTable(IEnumerable<DateTuple> DateRange,
             IEnumerable<IRRLossSchedule> IRRLossTable, DateTime CommutationDate)
         {
             var CurrentIncurredLoss = DateRange.AsParallel()
@@ -492,7 +495,7 @@ namespace IRR.Application.Service
         /// <param name="CommutationDate"></param>
         /// <returns></returns>
         //Returns the cumulative Paid Loss table
-        public async Task<IEnumerable<decimal>> PaidLossTable(IEnumerable<DateTuple> DateRange,
+        private async Task<IEnumerable<decimal>> PaidLossTable(IEnumerable<DateTuple> DateRange,
             IEnumerable<PaidSchedule> PaidLosses, DateTime CommutationDate)
         {
             var CurrentPaidLoss = DateRange.AsParallel()
@@ -503,7 +506,7 @@ namespace IRR.Application.Service
         }
 
 
-        public Task<IEnumerable<decimal>> Contributions(IEnumerable<CapitalSchedule> CapitalSchedule, 
+        private Task<IEnumerable<decimal>> Contributions(IEnumerable<CapitalSchedule> CapitalSchedule, 
             IEnumerable<DateTime> CashflowRange)
         {
             return Task.FromResult<IEnumerable<decimal>>(CashflowRange.AsParallel().Select(
@@ -520,7 +523,7 @@ namespace IRR.Application.Service
         /// <param name="IRRPremiumTable"></param>
         /// <returns></returns>
         //Calculate Gross Earned premium over all entries for the premium schedule
-        public Decimal GrossEarnedPremium(DateTime StartDate, 
+        private Decimal GrossEarnedPremium(DateTime StartDate, 
             DateTime EndDate, 
             DateTime CommutationDate, IEnumerable<PremiumSchedule> IRRPremiumTable)
         {
@@ -551,7 +554,7 @@ namespace IRR.Application.Service
         /// <param name="CommutationDate"></param>
         /// <param name="IRRLossSchedules"></param>
         /// <returns></returns>
-        public decimal CurrentIncurredLoss(DateTime StartDate, DateTime EndDate, 
+        private decimal CurrentIncurredLoss(DateTime StartDate, DateTime EndDate, 
             DateTime CommutationDate, IEnumerable<IRRLossSchedule> IRRLossSchedules)
         {
 
@@ -586,7 +589,7 @@ namespace IRR.Application.Service
         /// <param name="PaidLossSchedules"></param>
         /// <returns></returns>
         //Calculate PaidLoss without accumulation
-        public decimal CurrentPaidLoss(DateTime StartDate, DateTime EndDate,
+        private decimal CurrentPaidLoss(DateTime StartDate, DateTime EndDate,
             DateTime CommutationDate, IEnumerable<PaidSchedule> PaidLossSchedules)
         {
 
@@ -612,7 +615,7 @@ namespace IRR.Application.Service
         }
 
 
-        public decimal GetContribution(DateTime StartDate, IEnumerable<CapitalSchedule> CapitalSchedule)
+        private decimal GetContribution(DateTime StartDate, IEnumerable<CapitalSchedule> CapitalSchedule)
         {
             return CapitalSchedule.AsParallel().Where(c => c.Date == StartDate).Sum(c => c.IncrementalCapitalAdded);
         }
@@ -626,7 +629,7 @@ namespace IRR.Application.Service
         /// <param name="RetroProgramIds"></param>
         /// <returns></returns>
         //Get Paid Loss Schedule
-        public async Task<IEnumerable<PaidSchedule>> GetPaidLossSchedule(int  SPInvestorId,
+        private async Task<IEnumerable<PaidSchedule>> GetPaidLossSchedule(int  SPInvestorId,
                                                                     IEnumerable<int>? RetroProgramIds)
         {
             return await _queryService.QuerySet<PaidSchedule>(_queryService.GetPaidLossQuery());
@@ -634,7 +637,7 @@ namespace IRR.Application.Service
 
 
         //Get all response from the loss table
-        public async Task<IEnumerable<IRRLossSchedule>> GetIRRLossSchedule(double ClimateLoading = 1)
+        private async Task<IEnumerable<IRRLossSchedule>> GetIRRLossSchedule(double ClimateLoading = 1)
         {
 
             return await _queryService.QuerySet<IRRLossSchedule>(
@@ -668,13 +671,13 @@ namespace IRR.Application.Service
         /// <param name="RetroProgramIds"></param>
         /// <returns></returns>
         //Get Premium Schedule
-        public async Task<IEnumerable<PremiumSchedule>> GetPremiumSchedule(int SPInvestorId,
+        private async Task<IEnumerable<PremiumSchedule>> GetPremiumSchedule(int SPInvestorId,
                                                                     IEnumerable<int>? RetroProgramIds)
         {
             return await _queryService.QuerySet<PremiumSchedule>(_queryService.GetPremiumScheduleQuery());
         }
 
-        public async Task<IEnumerable<IRRPremiumInputDTO>> GetIRRPremiumInput(
+        private async Task<IEnumerable<IRRPremiumInputDTO>> GetIRRPremiumInput(
                                                                     int SPInvestor, 
                                                                     IEnumerable<int>? RetroProgramIds)
         {
@@ -683,7 +686,7 @@ namespace IRR.Application.Service
 
 
 
-        public async Task<IEnumerable<CapitalSchedule>> GetCapitalSchedule()
+        private async Task<IEnumerable<CapitalSchedule>> GetCapitalSchedule()
         {
 
             return await _queryService.QuerySet<CapitalSchedule>(_queryService.GetCapitalScheduleQuery());
@@ -691,7 +694,7 @@ namespace IRR.Application.Service
         }
 
 
-        public async Task<IEnumerable<BufferSchedule>> GetBufferSchedule()
+        private async Task<IEnumerable<BufferSchedule>> GetBufferSchedule()
         {
             return await _queryService.QuerySet<BufferSchedule>(_queryService.GetBufferQuery());
 
