@@ -1,17 +1,15 @@
 ﻿using Dapper;
 using Microsoft.Data.SqlClient;
 using IRR.Application.Interface;
-using IRR.Application.Service;
-using System.Runtime.InteropServices;
-using LanguageExt;
 
 
 
 namespace IRR.Application.Service
 {
-    public class IQueryService() : IQuery
+    public class IQueryService(IConfiguration configuration) : IQuery
     {
 
+        private readonly IConfiguration _configuration = configuration;
 
         public FormattableString GetIRRLossScheduleQuery(double ClimateLoading) => $@"
 
@@ -273,21 +271,7 @@ namespace IRR.Application.Service
 
             var con = new SqlConnection(_configuration.GetValue<string>("ConnectionString:Revoreader"));
 
-            try
-            { 
-                return await con.QueryAsync<T>(query.ToString());
-
-            }
-            catch (SqlException exception)
-            {
-
-                throw new Exception(exception.Message);
-
-            }
-            finally
-            {
-              con.Close();
-            }
+            return await con.QueryAsync<T>(query.ToString());
 
         }
 

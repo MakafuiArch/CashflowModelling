@@ -27,6 +27,7 @@ namespace IRR.Infrastructure
             builder.Services.Configure<IQueryService>(builder.Configuration.GetSection("ConnectionString"));
             builder.Services.AddSingleton<IQuery, IQueryService>();
             builder.Services.AddSingleton<IIRR, ArchViewIRRService>();
+            builder.Services.AddTransient<IDataTest, TestDataRead>();
             builder.Services.AddExceptionHandler<IRRExceptionHandler>();
             builder.Services.AddExceptionHandler<SQLExceptionHandler>();
 

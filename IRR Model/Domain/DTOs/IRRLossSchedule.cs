@@ -4,14 +4,14 @@
         int RetroProgramId,
         int SPInvestorId, int Year, 
         DateTime LossOccurrenceDay, 
-        decimal UnadjustedIncurredLoss, 
-        decimal IncurredLoss)
+        double UnadjustedIncurredLoss, 
+        double IncurredLoss)
     {
 
         private readonly int _year = Year;
         private readonly DateTime _lossOccurenceDay = LossOccurrenceDay;
-        private readonly decimal _unadjustedIncurredLoss = UnadjustedIncurredLoss;
-        private readonly decimal _incurredLoss = IncurredLoss;
+        private readonly double _unadjustedIncurredLoss = UnadjustedIncurredLoss;
+        private readonly double _incurredLoss = IncurredLoss;
         private readonly int _RetroProfileId = RetroProfileId;
         private readonly int _RetroProgramId = RetroProgramId;
         private readonly int _SPInvestorId = SPInvestorId;
@@ -28,8 +28,8 @@
         public int Year => _year;
         public DateTime LossOccurenceDay => _lossOccurenceDay;
 
-        public decimal UnadjustedIncurredLoss => _unadjustedIncurredLoss;
+        public double UnadjustedIncurredLoss => _unadjustedIncurredLoss;
 
-        public decimal IncurredLoss => _incurredLoss;
+        public double IncurredLoss => _incurredLoss;
     }
 }

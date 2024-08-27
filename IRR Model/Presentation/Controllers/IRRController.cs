@@ -5,15 +5,17 @@ using IRR.Application.Payload;
 using Microsoft.Spark.Sql;
 using LanguageExt.Pipes;
 using Microsoft.Data.SqlClient;
+using IRR.Application.Service;
 
 namespace IRR.Presentation.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class IRRController(IIRR irrService) : ControllerBase
+    public class IRRController(IIRR irrService, IDataTest testData) : ControllerBase
     {
 
         private readonly IIRR _irrService = irrService;
+        private readonly IDataTest _testData = testData;
 
 
         /// <summary>
@@ -45,7 +47,8 @@ namespace IRR.Presentation.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         [ProducesErrorResponseType(typeof(SqlException))]
-        public DataFrame GetCashFlows([FromBody] IRRInputs Inputs) => _irrService.GetIRRForSPInvestor(Inputs).Result[Inputs.SPInvestorId].Item1;
+        public DataFrame GetCashFlows([FromBody] IRRInputs Inputs) => 
+            _irrService.GetIRRForSPInvestor(Inputs).Result[Inputs.SPInvestorId].Item1;
 
 
 
@@ -63,6 +66,22 @@ namespace IRR.Presentation.Controllers
         {
            return _irrService.GetIRRForSPInvestor(Inputs).Result[Inputs.SPInvestorId].Item2;
         }
+
+
+
+
+        [HttpPost("test-multiyear-spid")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public double IRRTestURL()
+        {
+
+
+            return _irrService.TestIRR().Result;
+        }
+
+
 
     }
 }

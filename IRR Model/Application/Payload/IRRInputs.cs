@@ -20,6 +20,6 @@ namespace IRR.Application.Payload
     {
 
         private IEnumerable<CapitalSchedule> GetCapitalSchedule() => CapitalSchedules.IsNull() ? new List<CapitalSchedule>([new
-                CapitalSchedule(1, (decimal)Capital, (DateTime) QuarterStartDate!)]) : CapitalSchedules!;
+                CapitalSchedule(1, Capital, (DateTime) QuarterStartDate!)]) : CapitalSchedules!;
     }
 }
