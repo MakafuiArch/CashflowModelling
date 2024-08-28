@@ -2,10 +2,8 @@ using Microsoft.AspNetCore.Mvc;
 using IRR.Domain.DTOs;
 using IRR.Application.Interface;
 using IRR.Application.Payload;
-using Microsoft.Spark.Sql;
-using LanguageExt.Pipes;
 using Microsoft.Data.SqlClient;
-using IRR.Application.Service;
+ 
 
 namespace IRR.Presentation.Controllers
 {
@@ -18,11 +16,7 @@ namespace IRR.Presentation.Controllers
         private readonly IDataTest _testData = testData;
 
 
-        /// <summary>
-        /// Get the Premium Schedule for all Special Purpose Vehichle Investor Id  (SPInvestorId) specified
-        /// </summary>
-        /// <param name="ids"> Special Purpose Vehicle Investor Ids</param>
-        /// <returns>This returns an enumeration of all the Premium Schedules</returns>
+ 
         [HttpPost("getpremiums")]
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -47,8 +41,8 @@ namespace IRR.Presentation.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         [ProducesErrorResponseType(typeof(SqlException))]
-        public DataFrame GetCashFlows([FromBody] IRRInputs Inputs) => 
-            _irrService.GetIRRForSPInvestor(Inputs).Result[Inputs.SPInvestorId].Item1;
+        public double GetCashFlows([FromBody] IRRInputs Inputs) => 
+            _irrService.GetIRRForSPInvestor(Inputs).Result[Inputs.SPInvestorId];
 
 
 
@@ -64,7 +58,7 @@ namespace IRR.Presentation.Controllers
         [ProducesErrorResponseType(typeof(SqlException))]
         public double GetMultiYearIRRForSPInvestor([FromBody] IRRInputs Inputs)
         {
-           return _irrService.GetIRRForSPInvestor(Inputs).Result[Inputs.SPInvestorId].Item2;
+           return _irrService.GetIRRForSPInvestor(Inputs).Result[Inputs.SPInvestorId];
         }
 
 

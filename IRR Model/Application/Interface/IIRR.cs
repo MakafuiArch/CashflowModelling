@@ -12,7 +12,7 @@ namespace IRR.Application.Interface
     public interface IIRR
     {
         Task<IEnumerable<IRRPremiumInputDTO>> GetIRRPremiumInput(IEnumerable<int>? ids);
-        Task<Dictionary<int, Tuple<DataFrame, double>>> GetIRRForSPInvestor(IRRInputs input);
+        Task<Dictionary<int, double>> GetIRRForSPInvestor(IRRInputs input);
 
         Task<double> TestIRR();
     }

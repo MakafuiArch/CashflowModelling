@@ -4,48 +4,34 @@ namespace IRR.Domain.DTOs
 {
 
     [Serializable]
-    public class IRRPremiumInputDTO
+    public class IRRPremiumInputDTO(
+        int SPInvestor,
+        int RetroProfileId,
+        int RetroProgramId,
+        String LayerInception,
+        Decimal TotalSubjectPremium)
     {
 
         [Model(ColumnName = "SPInvestor")]
-        public int SPInvestor { get; set; }
+        public int SPInvestor { get; set; } = SPInvestor;
 
-        [Model(ColumnName ="RetroProfileId")]
-        public int RetroProfileId { get; set; }
+        [Model(ColumnName = "RetroProfileId")]
+        public int RetroProfileId { get; set; } = RetroProfileId;
 
         [Model(ColumnName = "RetroProgramId")]
-        public int RetroProgramId { get; set; }
+        public int RetroProgramId { get; set; } = RetroProgramId;
 
         [Model(ColumnName = "LayerInception")]
-        public String LayerInception { get; set; }
+        public String LayerInception { get; set; } = LayerInception;
 
         [Model(ColumnName = "TotalSubjectPremium")]
-        public Decimal TotalSubjectPremium { get; set; }
+        public Decimal TotalSubjectPremium { get; set; } = TotalSubjectPremium;
 
-        
+
 
         public IRRPremiumInputDTO ShallowCopy()
         {
             return (IRRPremiumInputDTO)MemberwiseClone();
         }
-
-        
-
-        public IRRPremiumInputDTO(
-            int SPInvestor,
-            int RetroProfileId, 
-            int RetroProgramId, 
-            String LayerInception, 
-            Decimal TotalSubjectPremium){
-
-            this.RetroProfileId = RetroProfileId;
-            this.SPInvestor = SPInvestor;
-            this.RetroProgramId = RetroProgramId;
-            this.LayerInception = LayerInception;
-            this.TotalSubjectPremium = TotalSubjectPremium;
-           
-        }
-
-
     }
 }

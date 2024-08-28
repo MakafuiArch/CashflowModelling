@@ -4,17 +4,19 @@ using Microsoft.IdentityModel.Tokens;
 using System.Numerics;
 using Microsoft.Spark.Sql;
 using Microsoft.Spark.Sql.Types;
-using Microsoft.Spark.Sql.Expressions;
-using Excel.FinancialFunctions;
 using FluentValidation;
 using IRR.Application.Payload;
 using Microsoft.Data.Analysis;
+using LanguageExt;
+using LanguageExt.ClassInstances;
+using Excel.FinancialFunctions;
+
 
 
 
 namespace IRR.Application.Service
 {
-    using DataFrame = Microsoft.Spark.Sql.DataFrame;
+   
     using DataFrameRow = (DateTime StartDate, DateTime EndDate,
         double GrossEarnedPremium, double IncurredLoss, double PaidLoss);
 
@@ -24,18 +26,9 @@ namespace IRR.Application.Service
         private readonly IQuery _queryService = queryService;
         private readonly IDataTest _testData = _testData;
 
-        private static readonly Dictionary<string, StructField> DataFrameTableNames = new()
-        {
-            { "Period Start Date", new StructField("Period Start Date", new DoubleType())},
-            { "Period End Date", new StructField("Period End Date", new DoubleType()) },
-            { "Gross Earned Premium", new StructField("Gross Earned Premium", new DoubleType()) },
-            { "Incurred Losses",new StructField("Incurred Losses", new DoubleType()) },
-            { "Paid Losses", new StructField("Paid Losses", new DoubleType()) }
-        };
+ 
 
-
-
-        public async Task<Dictionary<int, Tuple<DataFrame, double>>> GetIRRForSPInvestor(IRRInputs input)
+        public async Task<Dictionary<int, double>> GetIRRForSPInvestor(IRRInputs input)
         {
 
             var StartDate = (DateTime) input.QuarterStartDate!;
@@ -46,9 +39,11 @@ namespace IRR.Application.Service
             var Capital = input.Capital;
             var AcquisitionExpenseRate = input.AcquisitionExpense;
 
+            var bufferSchedule = new List<BufferSchedule>();
+
 
             return await IRRCashFlow(StartDate, EndDate, CommutationDate, RetroProgramIds!, 
-                SPInvestorId, Capital, AcquisitionExpenseRate);
+                SPInvestorId, Capital, bufferSchedule, AcquisitionExpenseRate);
 
         }
 
@@ -65,18 +60,19 @@ namespace IRR.Application.Service
         /// <param name="Capital"></param>
         /// <param name="AcquisitionExpenseRate"></param>
         /// <returns></returns>
-        public async Task<Dictionary<int, Tuple<DataFrame, double>>> IRRCashFlow(DateTime StartDate, 
+        public async Task<Dictionary<int,double>> IRRCashFlow(DateTime StartDate, 
             DateTime EndDate, 
             DateTime CommutationDate, 
             IEnumerable<int> RetroProgramIds, 
             int SPInvestorId, 
             double Capital, 
+            IEnumerable<BufferSchedule> bufferSchedules,
             double AcquisitionExpenseRate
             
             )
         {
 
-            var responseDictionary = new Dictionary<int, Tuple<DataFrame, double>>();
+            var responseDictionary = new Dictionary<int, double>();
 
 
 
@@ -108,8 +104,8 @@ namespace IRR.Application.Service
 
 
 
-                var dataframeIRRResponse = await ComputeIRR(PremiumTable.Result, PaidLossTable.Result,
-                                        IncurredLossTable.Result, CapitalTable.Result, (double) Capital,
+                var dataframeIRRResponse = await IRRCompute(PremiumTable.Result, PaidLossTable.Result,
+                                        IncurredLossTable.Result, CapitalTable.Result,bufferSchedules,
                                         CommutationDate, (double) AcquisitionExpenseRate, DateRange);
 
                 responseDictionary.Add(SPInvestorId, dataframeIRRResponse);
@@ -162,6 +158,12 @@ namespace IRR.Application.Service
 
             DateTime commutationDate = new(2027, 1, 2);
 
+
+            var NDate = Enumerable.Range(0, ((int)Math.Ceiling((decimal)endDate.Subtract(startDate).Days / 365)*12))
+                                  .Select(day => startDate.AddMonths(day * 3)).ToList();
+
+            var NEnd = NDate.Select(date => date.AddMonths(3).AddDays(-1)).ToList();
+
             var StartDateRange = Enumerable.Range(0, endDate.Subtract(startDate).Days).
                                    Select(days => days ==0 ? startDate.AddDays(0) 
                                    : startDate.AddDays(2*days)).ToList();
@@ -169,7 +171,7 @@ namespace IRR.Application.Service
 
             var EndDateRange = StartDateRange.Select(date => date.AddDays(1)).ToList();
 
-            var rangedate = ListsToTuple<DateTime, DateTime>(StartDateRange, EndDateRange);
+            var rangedate = ListsToTuple<DateTime, DateTime>(NDate, NEnd);
 
 
             IEnumerable<DateTuple> DateRange = rangedate.Select(p => new DateTuple(p.Item1, p.Item2));
@@ -178,7 +180,8 @@ namespace IRR.Application.Service
             var NewDateRange = DateRange.Where(predicate => predicate.StartDate.Subtract(commutationDate).Days < 0).ToList();
 
 
-            return IRRCompute(PremiumTable, PaidLossTable, IncurredLossTable, CapitalTable, BufferTable, commutationDate, 0.35, NewDateRange);
+            return IRRCompute(PremiumTable, PaidLossTable, IncurredLossTable, CapitalTable, 
+                BufferTable, commutationDate, 9.01930993488021/100, NewDateRange);
 
 
         }
@@ -186,7 +189,18 @@ namespace IRR.Application.Service
 
 
 
-
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="PremiumTable"></param>
+        /// <param name="PaidLossTable"></param>
+        /// <param name="IncurredLossTable"></param>
+        /// <param name="CapitalTable"></param>
+        /// <param name="BufferTab"></param>
+        /// <param name="CommutationDate"></param>
+        /// <param name="AcquisitonExpenseRate"></param>
+        /// <param name="DateRange"></param>
+        /// <returns></returns>
         private async Task<double> IRRCompute(IEnumerable<PremiumSchedule> PremiumTable,
                                             IEnumerable<PaidSchedule> PaidLossTable,
                                             IEnumerable<IRRLossSchedule> IncurredLossTable,
@@ -199,7 +213,7 @@ namespace IRR.Application.Service
 
             var CommissionRate = 0;
             var HurdleAmount = 0;
-            var IncomeAccumuationRate = Math.Pow(1.05, (double) 1/ (double) 360);
+            var IncomeAccumuationRate = Math.Pow((1+0.05/4), (double) 1/ (double) 360);
 
             var ProfitCommission = 0.35;
 
@@ -220,12 +234,15 @@ namespace IRR.Application.Service
             var PaidLosses = this.PaidLossTable(DateRange, PaidLossTable, CommutationDate);
 
 
-            var CapitalContribution = Contributions(CapitalTable, CashFlowRange);
-
+            var CapitalContribution = Contributions(CapitalTable, 
+                        DateRange.Select(d => new Tuple<DateTime, DateTime>(d.StartDate, d.EndDate)).ToList());
 
             var TotalCapital = CapitalTable.Sum(p => p.IncrementalCapitalAdded);
 
             var Buffers = BuffersTab(BufferTab, DateRange);
+
+
+            var minBuf = BufferTab.Min(b => b.BufferDate);
 
 
             await Task.WhenAll(GrossEarnedPremiums, IncurredLosses, PaidLosses, CapitalContribution, Buffers);
@@ -242,11 +259,6 @@ namespace IRR.Application.Service
 
             var CashFlowDataFrame = new Microsoft.Data.Analysis.DataFrame(CashFlowStart, CashFlowEnd, 
                 GrossEarnedPremium, IncurLosses, PaidLoss, CapitalTab, Buffer);
-
-
-
-            Microsoft.Data.Analysis.DataFrame.SaveCsv(CashFlowDataFrame, "C:/Users/maheto/OneDrive - " +
-                "Arch Capital Group/Desktop/Work Files/Cashflow Modelling/InitialData.csv");
 
 
             CashFlowDataFrame["Original Acquisition Expenses"] = CashFlowDataFrame["Gross Earned Premium"].Multiply(
@@ -267,7 +279,7 @@ namespace IRR.Application.Service
 
             CashFlowDataFrame["Float Change"] = CashFlowDataFrame["Float Change"].Subtract(CashFlowDataFrame["Paid Loss Lag"]);
 
-            //<--------------- Calculating Float------------------->
+            //<---------------------Calculating Float------------------------------->
 
             var StartingFloat = new PrimitiveDataFrameColumn<double>("Starting Float", CashFlowDataFrame.Rows.Count);
 
@@ -280,23 +292,31 @@ namespace IRR.Application.Service
             var EndingFloat = new PrimitiveDataFrameColumn<double>("Ending Float",
                 CashFlowDataFrame.Rows.Count);
 
+            var PeriodDays= new List<int>();
+
+            var YearDays = new List<int>();
+
             for (int i = 0; i < CashFlowDataFrame.Rows.Count; i++)
             {
 
-                if (i == 0)
-                {
-                    StartingFloat[i] = 0;
+                int DaysInPeriod = ((DateTime)CashFlowDataFrame["Period End Date"][i]).Subtract(((DateTime)CashFlowDataFrame["Period Start Date"][i])).Days + 1;
 
-                }
-                else
-                {
-                    StartingFloat[i] = EndingFloat[i - 1];
-                }
+                DateTime startYear = new(((DateTime)CashFlowDataFrame["Period Start Date"][i]).Year, 1, 1);
+
+                DateTime endYear = new(((DateTime)CashFlowDataFrame["Period End Date"][i]).Year, 12, 31);
+
+                int DaysOfYear = Math.Abs(endYear.Subtract(startYear).Days) + 1;
+
+
+                PeriodDays.Add(DaysInPeriod);
+                YearDays.Add(DaysOfYear);
+
+                StartingFloat[i] = i == 0 ? (double?)0 : EndingFloat[i - 1];
 
                 AverageInvestmentFloat[i] = (double)Math.Max((double) StartingFloat[i]! + 
-                                    (double) CashFlowDataFrame["Float Change"][i]*0.5/360, 0);
+                                    (double) CashFlowDataFrame["Float Change"][i]*0.5 , 0);
 
-                InvestmentIncome[i] =  AverageInvestmentFloat[i] * (double) IncomeAccumuationRate;
+                InvestmentIncome[i] =  AverageInvestmentFloat[i] * ((double)Math.Pow((float) 1.05, (float) DaysInPeriod / (float) DaysOfYear) - 1);
 
                 EndingFloat[i] = StartingFloat[i] + (double) CashFlowDataFrame["Float Change"][i] + InvestmentIncome[i];
 
@@ -315,7 +335,6 @@ namespace IRR.Application.Service
 
             CashFlowDataFrame["Subject To Profit Commission"] = (CashFlowDataFrame["Net Ceded Premium"]
                                              .Subtract(CashFlowDataFrame["Incurred Losses"])
-                                         
                                               -
                                              
                                             ((double)CashFlowDataFrame["Net Ceded Premium"].Max()
@@ -327,7 +346,7 @@ namespace IRR.Application.Service
 
                                            0
 
-                                            ).Select(p => p.Value == true ? (double) 1 : (double) 0);
+                                            ).Select(p => p!.Value == true ? (double) 1 : (double) 0);
 
 
             CashFlowDataFrame.Columns.Add(new DoubleDataFrameColumn("SubjectBool", SubjectProfitBoolResult));
@@ -337,14 +356,18 @@ namespace IRR.Application.Service
                                                             .Multiply(CashFlowDataFrame["SubjectBool"])
                                                             .Add(CashFlowDataFrame["Cumulative Investment Income"]) +
                                                             ((double)CashFlowDataFrame["Net Ceded Premium"].Max()
-                                            + (double)CashFlowDataFrame["Incurred Losses"].Max());
+                                            - (double)CashFlowDataFrame["Incurred Losses"].Max());
 
 
             CashFlowDataFrame["Total Earned Profits"] = CashFlowDataFrame["Subject To Profit Commission"] - HurdleAmount;
 
 
-            var EarnedProfitsBoolResult = (CashFlowDataFrame["Total Earned Profits"] - HurdleAmount)
-                                                .ElementwiseGreaterThan(0).Select(p => p.Value == true ? (double) 1 : (double) 0).ToList();
+            //var LagCashFlow = CashFlowDataFrame["Capital Contribution"].RightShift(1, false);
+
+
+            var EarnedProfitsBoolResult = CashFlowDataFrame["Total Earned Profits"]
+                                                .ElementwiseGreaterThan(0)
+                                                .Select(p => p!.Value == true ? (double) 1 : (double) 0).ToList();
 
 
             CashFlowDataFrame.Columns.Add(new DoubleDataFrameColumn("EarnedBool", EarnedProfitsBoolResult));
@@ -354,8 +377,8 @@ namespace IRR.Application.Service
 
                                     .Subtract(
 
-                                        (CashFlowDataFrame["Total Earned Profits"] - HurdleAmount)
-                                        .Multiply(CashFlowDataFrame["SubjectBool"])*ProfitCommission
+                                       CashFlowDataFrame["Total Earned Profits"]
+                                        .Multiply(CashFlowDataFrame["EarnedBool"])*ProfitCommission
                                     );
 
 
@@ -369,8 +392,6 @@ namespace IRR.Application.Service
             CashFlowDataFrame.Columns.Add(DataFrameLag("Incremental Cashflow", CashFlowDataFrame["Total Earned Profits"],
 
                                     (double) CashFlowDataFrame["Total Earned Profits"][0] ));
-
-
 
             //<-----------------------Capital Calculation----------------------------------->
 
@@ -387,17 +408,18 @@ namespace IRR.Application.Service
 
                 if(i == 0)
                 {
+
                     StartingCapital[i] = (double) CashFlowDataFrame["Capital Contribution"][0] + 
                                         Math.Min((double) CashFlowDataFrame["Incremental Cashflow"][0], 0);
                 }
                 else
                 {
-                    StartingCapital[i] = (double)CashFlowDataFrame["Capital Contribution"][0] +
-                                        Math.Min((double)CashFlowDataFrame["Incremental Cashflow"][0], 0) + EndingCapital[i-1];
+                    StartingCapital[i] = (double)CashFlowDataFrame["Capital Contribution"][i] +
+                                        Math.Min((double)CashFlowDataFrame["Incremental Cashflow"][i], 0) + EndingCapital[i-1];
                 }
 
 
-                InvestmentIncomeOnCapital[i] = StartingCapital[i] * IncomeAccumuationRate;
+                InvestmentIncomeOnCapital[i] = StartingCapital[i] * (Math.Pow((float) 1.05, (float)PeriodDays[i] / (float)YearDays[i]) -1);
 
                 EndingCapital[i] = InvestmentIncomeOnCapital[i] + StartingCapital[i];
 
@@ -429,55 +451,73 @@ namespace IRR.Application.Service
 
             var requiredCapitalBoolResult= CashFlowDataFrame["Required Capital"]
                 
-                                       .ElementwiseLessThan(0).Select(p => p.Value == true ? (double)1 : (double)0).ToList();
+                                       .ElementwiseLessThan(0).Select(p => p!.Value == true ? (double)1 : (double)0).ToList();
 
 
             CashFlowDataFrame.Columns.Add(new DoubleDataFrameColumn("RequiredCapitalBool", requiredCapitalBoolResult));
 
 
 
-            CashFlowDataFrame["Required Capital"] = (CashFlowDataFrame["Required Capital"] - (double) TotalCapital).Multiply(CashFlowDataFrame["RequiredCapitalBool"]) + TotalCapital;
+            CashFlowDataFrame["Required Capital"] = (CashFlowDataFrame["Required Capital"])
+                                                    .Multiply(CashFlowDataFrame["RequiredCapitalBool"]) + TotalCapital;
 
 
-            CashFlowDataFrame["Capital Released"] = CashFlowDataFrame["Investors Funds"].Subtract(CashFlowDataFrame["Required Capital"]);
+            CashFlowDataFrame["Capital Released"] = CashFlowDataFrame["Investors Funds"]
+                            .Subtract(CashFlowDataFrame["Required Capital"]);
 
 
             var CapitalBoolResult = CashFlowDataFrame["Capital Released"]
 
-                                       .ElementwiseLessThan(0).Select(p => p.Value == true ? (double)1 : (double)0).ToList();
+                                       .ElementwiseGreaterThan(0).Select(p => p!.Value == true ? (double)1 : (double)0).ToList();
 
 
             CashFlowDataFrame.Columns.Add(new DoubleDataFrameColumn("CapitalBool", CapitalBoolResult));
 
 
 
+            //<--------------------- Calculating IRR ----------------------------------------------->
+
+            var CapitalReleasedBool = new List<double>();
+
+
+            for (int i =0; i < CashFlowDataFrame.Rows.Count; i++)
+            {
+
+                CapitalReleasedBool.Add((DateTime)CashFlowDataFrame["Period End Date"][i] > minBuf ? 1 : 0);
+
+            }
+
+
+
+            CashFlowDataFrame.Columns.Add(new DoubleDataFrameColumn("CapitalReleasedBool", CapitalReleasedBool));
+
+
             CashFlowDataFrame["Capital Released"] = CashFlowDataFrame["Capital Released"].Multiply(
 
-                CashFlowDataFrame["CapitalBool"]);
+                CashFlowDataFrame["CapitalBool"]).Multiply(CashFlowDataFrame["CapitalReleasedBool"]);
 
 
             CashFlowDataFrame.Columns.Add(DataFrameLag("Investor Cashflow", 
                 CashFlowDataFrame["Capital Released"]).Subtract(CashFlowDataFrame["Capital Contribution"]));
 
 
-            //PrimitiveDataFrameColumn<bool> boolFilter = CashFlowDataFrame["Period End Date"]
+           
 
 
             Microsoft.Data.Analysis.DataFrame.SaveCsv(CashFlowDataFrame, "C:/Users/maheto/OneDrive - " +
                 "Arch Capital Group/Desktop/Work Files/Cashflow Modelling/TestData.csv");
 
 
-            return 0;
+            return Financial.XIrr(GetColumnData<double>(CashFlowDataFrame["Investor Cashflow"]),
+                GetColumnData<DateTime>(CashFlowDataFrame["Period Start Date"])); 
                 
                 
-                //Financial.XIrr(GetColumnData<double> (CashFlowDataFrame["Investor Cashflow"]),
-                //GetColumnData<DateTime>(CashFlowDataFrame["Period Start Date"]));
-
+               
         }
 
 
 
-        private IEnumerable<T> GetColumnData<T>(DataFrameColumn dataFrameColumn)
+        private static IEnumerable<T> GetColumnData<T>(DataFrameColumn dataFrameColumn)
         {
             for(int i = 0; i < dataFrameColumn.Length; i++)
             {
@@ -520,331 +560,6 @@ namespace IRR.Application.Service
 
 
         //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="PremiumTable"></param>
-        /// <param name="PaidLossTable"></param>
-        /// <param name="IncurredLossTable"></param>
-        /// <param name="CapitalTable"></param>
-        /// <param name="Capital"></param>
-        /// <param name="CommutationDate"></param>
-        /// <param name="AcquisitonExpenseRate"></param>
-        /// <param name="DateRange"></param>
-        /// <returns></returns>
-        private async Task<Tuple<Microsoft.Spark.Sql.DataFrame, double>> ComputeIRR(IEnumerable<PremiumSchedule> PremiumTable, 
-                                            IEnumerable<PaidSchedule> PaidLossTable, 
-                                            IEnumerable<IRRLossSchedule> IncurredLossTable, 
-                                            IEnumerable<CapitalSchedule> CapitalTable,
-                                            double Capital,
-                                            DateTime CommutationDate, 
-                                            double AcquisitonExpenseRate,
-                                            IEnumerable<DateTuple> DateRange)
-        {
-            var CommissionRate = 1;
-            var ProfitCommission = 0.35;
-            var HurdleAmount = 0;
-            var IncomeAccumuationRate = (float)Math.Pow(1.05, 1 / 360);
-
-            var CashFlowRange = DateRange.Select(p => p.StartDate).ToList();
-
-
-            // Get the all the required data forms for IRR calculation
-            var GrossEarnedPremiums = this.GrossEarnedPremiumTable(DateRange,
-                                                        PremiumTable, CommutationDate);
-
-            var IncurredLosses = this.IncurredLossTable(DateRange,
-                                    IncurredLossTable, CommutationDate);
-
-            var PaidLosses = this.PaidLossTable(DateRange, PaidLossTable, CommutationDate);
-
-
-            var CapitalContribution = this.Contributions(CapitalTable, CashFlowRange);
-
-
-            var TotalCapital = CapitalTable.Sum(p => p.IncrementalCapitalAdded);
-            
-
-            await Task.WhenAll(GrossEarnedPremiums, IncurredLosses, PaidLosses, CapitalContribution);
-
-
-            var GenericRows = DateRange
-                                     .Zip(GrossEarnedPremiums.Result, (x, y) => (x.StartDate, x.EndDate, y))
-                                     .Zip(IncurredLosses.Result, (x, y) => (x.StartDate, x.EndDate, x.y, y))
-                                     .Zip(PaidLosses.Result, (x, y) => (x.StartDate, x.EndDate, x.Item3, x.Item4, y));
-
-            //Calculation 
-
-            var IRRTable = GetDataFrame(DataFrameTableNames, GetTupleToGenericRow(GenericRows));
-
-            IRRTable.WithColumn("Row Number",
-                Functions.RowNumber().Over(Window.OrderBy(IRRTable.Col("Period Start Date"))));
-
-            IRRTable.WithColumn("IsCommutable", IRRTable.Col("Period Start Date") > Functions.Lit(CommutationDate));
-
-            IRRTable.WithColumn("AcquisitionExpense", IRRTable.Col("Gross Earned Premium").Multiply(AcquisitonExpenseRate));
-
-            IRRTable.WithColumn("Commission and Tail Fee", (IRRTable.Col("Gross Earned Premium")
-                                    - IRRTable.Col("AcquisitionExpense")) * Functions.Lit(CommissionRate));
-
-            IRRTable.WithColumn("Net Ceded Premium", IRRTable.Col("Gross Earned Premium")
-                                    - IRRTable.Col("AcquisitionExpense") - IRRTable.Col("Commision and Tail Fee"));
-
-
-            IRRTable.WithColumn("Float Change", (IRRTable.Col("Net Ceded Premium")
-                                - Functions.Lag(IRRTable.Col("Net Ceded Premium"), 1, 0)) -
-                                (IRRTable.Col("Paid Losses")
-                                - Functions.Lag(IRRTable.Col("Paid Losses"), 1, 0)));
-
-
-             var NewTable = GetFloatRecursion((int) IRRTable.Count(), IncomeAccumuationRate);
-
-            IRRTable.Join(NewTable, "Row Number");
-
-
-            IRRTable.WithColumn("Cumulative Investment Income",
-
-                Functions.Sum(IRRTable.Col("Investment Income on Float").Over(
-                    Window.OrderBy(IRRTable.Col("Period Start Date"))
-                           .RowsBetween(Window.UnboundedPreceding, Window.CurrentRow))
-
-                ));
-
-
-            IRRTable.WithColumn("Subject To Profit Commission",
-
-                Functions.Greatest(IRRTable.Col("Net Ceded Premium") - IRRTable.Col("Incurred Losses")
-                + IRRTable.Col("Cumulative Investment Income"), (Functions.Max(IRRTable.Col("Net Ceded Premium"))
-                - Functions.Max(IRRTable.Col("Incurred Losses")) + IRRTable.Col("Cumulative Investment Income"))
-
-                ));
-
-
-            IRRTable.WithColumn("Total Earned Profits",
-
-                IRRTable.Col("Subject To Profit Commission") -
-
-                Functions.Greatest(IRRTable.Col("Subject To Profit Commission") - Functions.Lit(HurdleAmount), Functions.Lit(0))
-                         .Multiply(ProfitCommission)
-
-                );
-
-
-            IRRTable.WithColumn("Profit Commission", IRRTable.Col("Subject To Profit Commission") 
-                - IRRTable.Col("Total Earned Profits"));
-
-            IRRTable.WithColumn("Cumulative Cashflow", IRRTable.Col("Net Ceded Premium")
-                - IRRTable.Col("Paid Losses") + IRRTable.Col("Cumulative Investment Income"));
-
-            IRRTable.WithColumn("Incremental Cashflow", IRRTable.Col("Total Earned Profits")
-                                - Functions.Lag(IRRTable.Col("Total Earned Profits"), 1, 0));
-
-
-            IRRTable = AddNewColumnToDataFrame(IRRTable, CapitalContribution.Result, "Capital Contribution");
-
-
-
-            IRRTable = RecursiveCTE(IRRTable, _queryService.CapitalRecursionQuery(IncomeAccumuationRate).ToString());
-
-
-            IRRTable.WithColumn("Cumulative Investment Income On Capital",
-
-            Functions.Sum(IRRTable.Col("Investment Income On Capital").Over(
-                Window.OrderBy(IRRTable.Col("Period Start Date"))
-                       .RowsBetween(Window.UnboundedPreceding, Window.CurrentRow))
-
-            ));
-
-
-            IRRTable.WithColumn("Investors Funds",
-            
-                IRRTable.Col("Total Earned Profits") +
-
-                IRRTable.Col("Cumulative Investment Income On Capital") +
-
-                Functions.Sum(IRRTable.Col("Investment Income on Float").Over(
-                    Window.OrderBy(IRRTable.Col("Period Start Date"))
-                        .RowsBetween(Window.UnboundedPreceding, Window.CurrentRow))
-
-            ));
-
-            IRRTable.WithColumn("Unpaid Losses",
-                                    Functions.Max(IRRTable.Col("Paid Losses")) - IRRTable.Col("Paid Losses"));
-
-
-
-            IRRTable.WithColumn("Buffer Factor", Functions.Lit(1.25));
-
-
-            IRRTable.WithColumn("Buffer Reserves", IRRTable.Col("Upaid Losses") * IRRTable.Col("Buffer Factor"));
-
-
-            IRRTable.WithColumn("Required Capital", Functions.Greatest(IRRTable.Col("Buffer Reserves"), Functions.Lit(Capital)));
-
-
-            IRRTable.WithColumn("Capital Released", Functions.Greatest(IRRTable.Col("Investors Funds") - IRRTable.Col("Required Capital"),
-                                 Functions.Lit(0)));
-
-            //This is dummy. Please change later
-
-            IRRTable.WithColumn("Investor Cashflow", (IRRTable.Col("Capital Released")
-                               - IRRTable.Col("Capital Contribution") - Functions.Lag(IRRTable.Col("Capital Released"),
-                               1, Functions.Lit(0))).Multiply(IRRTable.Col("IsCommutable")));
-
-            var Cashflow = IRRTable.Select("Investor Cashflow").Collect().Select(row => (double) Convert.ToDouble(row.Get(0)));
-
-            var CashflowDate = IRRTable.Select("Period Start Date").Collect().Select(row => Convert.ToDateTime(row.Get(0)));
-
-
-            
-            return new Tuple<Microsoft.Spark.Sql.DataFrame, double>( IRRTable.ToJSON(), Financial.XIrr(Cashflow, CashflowDate) ) ;
-
-        }
-
-
-
-        /// <summary>
-        /// Create A New DataFrame having a given name list and row data
-        /// </summary>
-        /// <param name="NameList"></param>
-        /// <param name="DataLists"></param>
-        /// <returns> Returns a DataFrame</returns>
-        private static DataFrame GetDataFrame(Dictionary<string, StructField> NameList, 
-                                            IEnumerable<GenericRow> DataLists)
-        {
-
-            var dataspark = SparkSession.Builder().GetOrCreate();
-
-            List<StructField> structFieldList = [];
-
-            foreach(string key in NameList.Keys)
-            {
-                structFieldList.Add(NameList[key]);
-            }
-
-            return  dataspark.CreateDataFrame(
-
-                        new List<GenericRow> (DataLists),
-
-                        new StructType(structFieldList)
-                ).Checkpoint().Cache();
-
-           
-        }
-
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="IrrTable"></param>
-        /// <param name="query"></param>
-        /// <returns></returns>
-        private static DataFrame RecursiveCTE(DataFrame IrrTable, string query)
-        {
-
-            var sparksesssion = SparkSession.Builder().GetOrCreate();
-
-            IrrTable.CreateOrReplaceTempView("IRRTable");
-
-            IrrTable = sparksesssion.Sql(query);
-
-            IrrTable.Drop("Row Number");
-
-
-            return IrrTable;
-
-        }
-
-
-        private static DataFrame GetFloatRecursion(int row_count, float AccumulationFactor)
-        {
-
-            var spark = SparkSession.Builder().GetOrCreate();
-
-            var FirstRow = spark.Sql("Select top 1 [Row Number], " +
-                "[Float Change] From IRRTable Order by [Row Number]").Collect().ElementAt(0);
-
-            double StartingFloat = 0;
-
-            double FloatChange = FirstRow.GetAs<double>("[Float Change]");
-
-
-            double AverageInvestmentFloat = Math.Max(FloatChange* 0.5, 0);
-
-            double InvestmentIncomeOnFloat = AverageInvestmentFloat * AccumulationFactor;
-
-            double EndingFloat = StartingFloat + FloatChange + InvestmentIncomeOnFloat;
-
-
-            List<GenericRow> results =
-            [
-                new GenericRow([1, FloatChange, StartingFloat, AverageInvestmentFloat, InvestmentIncomeOnFloat, EndingFloat])
-            ];
-
-            int rowNumber = 2;
-
-            while (rowNumber <= row_count) {
-
-
-
-                var CurrentRow = spark.Sql($"Select [Row Number], [Float Change] " +
-                    $"From IRRTable Where RowNumber = {rowNumber}").Collect().ElementAt(0);
-
-
-                FloatChange = CurrentRow.GetAs<double>("Float Change");
-
-                StartingFloat = EndingFloat;
-
-                AverageInvestmentFloat = Math.Max(StartingFloat + FloatChange* 0.5, 0);
-
-                InvestmentIncomeOnFloat = AverageInvestmentFloat * AccumulationFactor;
-
-                EndingFloat = StartingFloat + FloatChange + InvestmentIncomeOnFloat;
-
-
-                results.Add(new GenericRow([rowNumber, FloatChange, StartingFloat, AverageInvestmentFloat, 
-                                    InvestmentIncomeOnFloat, EndingFloat]));
-
-                rowNumber++;            
-            
-            }
-
-
-            var resultSchema = new StructType(
-            [
-                new StructField("Row Number", new IntegerType()),
-                new StructField("Float Change", new DoubleType()),
-                new StructField("Starting Float", new DoubleType()),
-                new StructField("Average Investment Float", new DoubleType()),
-                new StructField("Investment Income On Float", new DoubleType()),
-                new StructField("Ending Float", new DoubleType())
-            ]);
-
-            return spark.CreateDataFrame(results, resultSchema);
-
-        }
-
-
-        private static DataFrame AddNewColumnToDataFrame(DataFrame Table, IEnumerable<double> items, string ColumnName)
-        {
-
-
-            var sparksession = SparkSession.Builder().GetOrCreate();
-
-
-            DataFrame newColumnDf = sparksession.CreateDataFrame((IEnumerable<int>)items.Select((value, index) => 
-                                                        new{ Index = index, Value = value })).ToDF(ColumnName);
-
-
-            return Table.WithColumn(ColumnName, newColumnDf.Col(ColumnName));
-
-        }
-
-
-
-
-
 
 
         //Returns the Gross Earned Premium over a given date range
@@ -896,10 +611,20 @@ namespace IRR.Application.Service
 
 
         private Task<IEnumerable<double>> Contributions(IEnumerable<CapitalSchedule> CapitalSchedule, 
-            IEnumerable<DateTime> CashflowRange)
+            IEnumerable<Tuple<DateTime, DateTime>> CashflowRange)
         {
-            return Task.FromResult<IEnumerable<double>>(CashflowRange.AsParallel().Select(
-                cashflowdate => GetContribution(cashflowdate, CapitalSchedule)).ToList());
+
+
+            var CumSum = CashflowRange.AsParallel().Select(
+                cashflowdate => GetContribution(cashflowdate, CapitalSchedule)).ToList();
+
+            var newCumList = new List<double>() {0};
+
+            newCumList.AddRange(CumSum.GetRange(0, CumSum.Count-1));
+
+            var diffCumList = SubtractListItems(CumSum, newCumList);
+
+            return Task.FromResult<IEnumerable<double>>(diffCumList);
         }
 
         /// <summary>
@@ -908,7 +633,7 @@ namespace IRR.Application.Service
         /// <param name="BufferSchedule"></param>
         /// <param name="DateRange"></param>
         /// <returns></returns>
-        private Task<List<float>> BuffersTab(IEnumerable<BufferSchedule> BufferSchedule, 
+        private static Task<List<float>> BuffersTab(IEnumerable<BufferSchedule> BufferSchedule, 
             IEnumerable<DateTuple> DateRange)
         {
 
@@ -917,14 +642,17 @@ namespace IRR.Application.Service
             foreach(DateTuple dataTuple in DateRange)
             {
 
-                if(dataTuple.EndDate.Subtract(BufferSchedule.Select(m => m.BufferDate).Max()).Days <= 0)
+                var minDate = BufferSchedule.Select(m => m.BufferDate).Min(date => date);
+
+                if (dataTuple.EndDate <= minDate)
                 {
-                    BuffersTab.Add(BufferSchedule.Select(m => m.BufferFactor).Max());
+                    BuffersTab.Add(BufferSchedule.Select(m => m.BufferFactor).Max(buffer => buffer));
                 }
                 else
                 {
                     BuffersTab.Add(BufferSchedule
-                        .Where(b => b.BufferDate.Equals(dataTuple.StartDate))
+                        .Where(b => (b.BufferDate.Year == dataTuple.StartDate.Year) && 
+                        (b.BufferDate.Month + 3  > dataTuple.StartDate.Month) && (b.BufferDate.Month <= dataTuple.StartDate.Month))
                         .Select(m => m.BufferFactor).FirstOrDefault());
                 }
 
@@ -1037,9 +765,16 @@ namespace IRR.Application.Service
         }
 
 
-        private double GetContribution(DateTime StartDate, IEnumerable<CapitalSchedule> CapitalSchedule)
+        private static double GetContribution(Tuple<DateTime, DateTime>  DateRange, IEnumerable<CapitalSchedule> CapitalSchedule)
         {
-            return CapitalSchedule.AsParallel().Where(c => c.Date == StartDate).Sum(c => c.IncrementalCapitalAdded);
+            var yearcapital = CapitalSchedule.AsParallel()
+                .Where(c => c.Date >= DateRange.Item1 && c.Date < DateRange.Item2).ToList();
+
+            var oldcaprital = CapitalSchedule.AsParallel().Where(c => c.Date < DateRange.Item1).ToList();
+
+
+            return yearcapital.Union(oldcaprital).Sum(c => c.IncrementalCapitalAdded);
+              
         }
 
 
@@ -1149,7 +884,7 @@ namespace IRR.Application.Service
         /// <param name="list1"></param>
         /// <param name="list2"></param>
         /// <returns></returns>
-        private static IEnumerable<Tuple<T, P>> ListsToTuple<T, P>(IEnumerable<T> list1, 
+        private static List<Tuple<T, P>> ListsToTuple<T, P>(IEnumerable<T> list1, 
             IEnumerable<P> list2)
         {
 
@@ -1192,7 +927,7 @@ namespace IRR.Application.Service
         /// <param name="numbers"></param>
         /// <param name="CommutationDate"></param>
         /// <returns></returns>
-        private static IEnumerable<double> CumulativeSum(IEnumerable<LossPremTuple> numbers, 
+        private static List<double> CumulativeSum(IEnumerable<LossPremTuple> numbers, 
             DateTime CommutationDate) 
         {
             double sum = 0;
