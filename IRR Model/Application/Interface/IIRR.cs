@@ -14,6 +14,6 @@ namespace IRR.Application.Interface
         Task<IEnumerable<IRRPremiumInputDTO>> GetIRRPremiumInput(IEnumerable<int>? ids);
         Task<Dictionary<int, double>> GetIRRForSPInvestor(IRRInputs input);
 
-        Task<double> TestIRR();
+        Task<IRRResponse> TestIRR();
     }
 }

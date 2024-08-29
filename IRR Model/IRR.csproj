@@ -25,6 +25,8 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.Caching.Abstractions" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="8.0.0" />
     <PackageReference Include="Microsoft.Spark" Version="2.1.1" />
     <PackageReference Include="Microsoft.Spark.Extensions.Azure.Synapse.Analytics" Version="0.16.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.4.0" />

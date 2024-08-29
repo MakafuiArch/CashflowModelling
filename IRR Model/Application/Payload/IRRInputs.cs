@@ -12,7 +12,6 @@ namespace IRR.Application.Payload
         double Capital,
         IEnumerable<int>? RetroProgramIds,
         int SPInvestorId,
-        IEnumerable<double>? IncrementalCapitalAdded,
         IEnumerable<CapitalSchedule>? CapitalSchedules,
         int ViewType,
         double AcquisitionExpense

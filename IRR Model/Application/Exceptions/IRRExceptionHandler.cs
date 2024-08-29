@@ -1,5 +1,7 @@
 ﻿using Microsoft.AspNetCore.Diagnostics;
 
+using IRR.Application.Payload;
+
 namespace IRR.Application.Exceptions
 {
     public class IRRExceptionHandler(ILogger<IRRExceptionHandler> logger): IExceptionHandler

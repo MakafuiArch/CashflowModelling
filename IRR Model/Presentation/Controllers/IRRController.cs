@@ -3,7 +3,8 @@ using IRR.Domain.DTOs;
 using IRR.Application.Interface;
 using IRR.Application.Payload;
 using Microsoft.Data.SqlClient;
- 
+
+
 
 namespace IRR.Presentation.Controllers
 {
@@ -22,6 +23,7 @@ namespace IRR.Presentation.Controllers
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         [ProducesErrorResponseType(typeof(SqlException))]
+        [ResponseCache(VaryByHeader ="User-Agent", Duration=30)]
         public IEnumerable<IRRPremiumInputDTO> GetPremium([FromBody] List<int> ids)
         {
             IEnumerable<IRRPremiumInputDTO> PremiumInputs = _irrService.GetIRRPremiumInput(ids).GetAwaiter().GetResult();
@@ -68,11 +70,12 @@ namespace IRR.Presentation.Controllers
         [ProducesResponseType(StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status400BadRequest)]
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public double IRRTestURL()
+        [ResponseCache(VaryByHeader = "User-Agent", Duration = 30)]
+        public Task<IRRResponse> IRRTestURL()
         {
 
 
-            return _irrService.TestIRR().Result;
+            return _irrService.TestIRR();
         }
 
 
