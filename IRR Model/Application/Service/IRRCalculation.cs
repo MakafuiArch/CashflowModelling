@@ -355,6 +355,13 @@ namespace IRR.Application.Service
 
 
 
+        public virtual void RollForward(IEnumerable<DateTime> rollFowardDates)
+        {
+
+        }
+
+
+
 
         public virtual IEnumerable<T> GetColumnData<T>(DataFrameColumn dataFrameColumn)
         {
