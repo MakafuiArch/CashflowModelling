@@ -1,4 +1,4 @@
-﻿using IRR.Application.Exceptions;
+using IRR.Application.Exceptions;
 using IRR.Application.Interface;
 using IRR.Application.Service;
 using IRR.Domain.DBContext;
@@ -26,10 +26,16 @@ namespace IRR.Infrastructure
 
             builder.Services.Configure<IQueryService>(builder.Configuration.GetSection("ConnectionString"));
             builder.Services.AddSingleton<IQuery, IQueryService>();
-            builder.Services.AddSingleton<IIRR, ArchViewIRRService>();
+            builder.Services.AddTransient<IIRR, ArchViewIRRService>();
             builder.Services.AddTransient<IDataTest, TestDataRead>();
             builder.Services.AddExceptionHandler<IRRExceptionHandler>();
             builder.Services.AddExceptionHandler<SQLExceptionHandler>();
+            builder.Services.AddResponseCaching();
+            builder.Services.AddOutputCache(options =>
+            {
+                options.AddBasePolicy(builder => builder.Expire(TimeSpan.FromSeconds(5)));
+                options.AddPolicy("Expire 1 min", builder => builder.Expire(TimeSpan.FromMinutes(1)));
+            });
 
 
             //builder.Services.AddSingleton<IValidator<IRRInputs>, InputValidator>;
@@ -97,6 +103,12 @@ namespace IRR.Infrastructure
             app.UseHttpsRedirection();
 
             app.UseAuthorization();
+
+
+            app.UseResponseCaching();
+
+
+            app.UseOutputCache();
 
             app.MapControllers();
             await app.RunAsync();

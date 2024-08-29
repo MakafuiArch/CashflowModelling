@@ -1,4 +1,4 @@
-﻿using IRR.Infrastructure.Interface;
+using IRR.Infrastructure.Interface;
 using IRR.Domain.DBContext;
 using Microsoft.EntityFrameworkCore;
 

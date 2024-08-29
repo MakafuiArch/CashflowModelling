@@ -1,9 +1,13 @@
-﻿using Microsoft.EntityFrameworkCore;
+using IRR.Infrastructure.Interface;
 
-namespace IRR.Infrastructure.Interface
+namespace IRR.Infrastructure
 {
-    public interface IStartUp
+    public class StartFactory
     {
-        Task StartAsync(string[] args);
+        public IStartUp GetStartup(IEnumerable<string> args)
+        {
+
+            return args.Contains("--migrate") ? new MigrationStartUp() : new WebApiStartUp();
+        }
     }
 }
