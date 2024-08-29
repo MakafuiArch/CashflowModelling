@@ -1,10 +1,10 @@
-﻿using CashflowModelling.Infrastructure.Interface;
-using CashflowModelling.Domain.IRR.DBContext;
+using IRR.Infrastructure.Interface;
+using IRR.Domain.DBContext;
 using Microsoft.EntityFrameworkCore;
-using Stact;
 
 
-namespace CashflowModelling.Infrastructure
+
+namespace IRR.Infrastructure
 {
     public class MigrationStartUp : IStartUp
     {

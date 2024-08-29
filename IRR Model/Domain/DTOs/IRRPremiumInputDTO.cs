@@ -1,0 +1,37 @@
+﻿using IRR.Domain.ModelMappers;
+
+namespace IRR.Domain.DTOs
+{
+
+    [Serializable]
+    public class IRRPremiumInputDTO(
+        int SPInvestor,
+        int RetroProfileId,
+        int RetroProgramId,
+        String LayerInception,
+        Decimal TotalSubjectPremium)
+    {
+
+        [Model(ColumnName = "SPInvestor")]
+        public int SPInvestor { get; set; } = SPInvestor;
+
+        [Model(ColumnName = "RetroProfileId")]
+        public int RetroProfileId { get; set; } = RetroProfileId;
+
+        [Model(ColumnName = "RetroProgramId")]
+        public int RetroProgramId { get; set; } = RetroProgramId;
+
+        [Model(ColumnName = "LayerInception")]
+        public String LayerInception { get; set; } = LayerInception;
+
+        [Model(ColumnName = "TotalSubjectPremium")]
+        public Decimal TotalSubjectPremium { get; set; } = TotalSubjectPremium;
+
+
+
+        public IRRPremiumInputDTO ShallowCopy()
+        {
+            return (IRRPremiumInputDTO)MemberwiseClone();
+        }
+    }
+}
