@@ -3,6 +3,9 @@ using IRR.Application.Interface;
 using Microsoft.IdentityModel.Tokens;
 using IRR.Application.Payload;
 using LanguageExt;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.AspNetCore.OutputCaching;
+using Microsoft.Identity.Client;
 
 
 
@@ -11,13 +14,11 @@ using LanguageExt;
 namespace IRR.Application.Service
 {
 
-    public sealed class ArchViewIRRService(IQuery queryService, IDataTest _testData) : IRRCalculation, IIRR
+    public sealed class ArchViewIRRService(IQuery queryService,
+        IDataTest testData, IMemoryCache memoryCache) : IRRCalculation(memoryCache, testData), IIRR
     {
 
         private readonly IQuery _queryService = queryService;
-        private readonly IDataTest _testData = _testData;
-
- 
 
         public async Task<Dictionary<int, double>> GetIRRForSPInvestor(IRRInputs input)
         {
@@ -125,21 +126,24 @@ namespace IRR.Application.Service
             Type[] bufferTypes = [typeof(int), typeof(float), typeof(DateTime)];
 
 
-            var PremiumTable = _testData.ReadFileToObject<PremiumSchedule>("C:/Users/maheto/OneDrive - " +
+            var PremiumTable = GetCachedObject<IEnumerable<PremiumSchedule>>("PremiumTable", "C:/Users/maheto/OneDrive - " +
                 "Arch Capital Group/Desktop/Work Files/Cashflow Modelling/PremiumScheduleTest.csv", premiumTypes);
 
-            var IncurredLossTable = _testData.ReadFileToObject<IRRLossSchedule>("C:/Users/maheto/OneDrive - " +
+            var IncurredLossTable = GetCachedObject<IEnumerable<IRRLossSchedule>>("IncurredLossTable","C:/Users/maheto/OneDrive - " +
                 "Arch Capital Group/Desktop/Work Files/Cashflow Modelling/LossScheduleTest.csv", incurredLossTypes);
 
-            var PaidLossTable = _testData.ReadFileToObject<PaidSchedule>("C:/Users/maheto/OneDrive - " +
+            var PaidLossTable = GetCachedObject<IEnumerable<PaidSchedule>>("PaidLossTable", "C:/Users/maheto/OneDrive - " +
                 "Arch Capital Group/Desktop/Work Files/Cashflow Modelling/PaidLossTest.csv", paidLossTypes);
 
-            var CapitalTable = _testData.ReadFileToObject<CapitalSchedule>("C:/Users/maheto/OneDrive - " +
+            var CapitalTable = GetCachedObject<IEnumerable<CapitalSchedule>>("CapitalTable","C:/Users/maheto/OneDrive - " +
                 "Arch Capital Group/Desktop/Work Files/Cashflow Modelling/CapitalScheduleTest.csv", capitalTypes);
 
 
-            var BufferTable = _testData.ReadFileToObject<BufferSchedule>("C:/Users/maheto/OneDrive - " +
+            var BufferTable = GetCachedObject<IEnumerable<BufferSchedule>>("BufferTable","C:/Users/maheto/OneDrive - " +
                 "Arch Capital Group/Desktop/Work Files/Cashflow Modelling/BufferScheduleTest.csv", bufferTypes);
+
+
+            Task.WhenAll(PremiumTable, PaidLossTable, CapitalTable, BufferTable);
 
 
 
@@ -172,8 +176,8 @@ namespace IRR.Application.Service
             var NewDateRange = DateRange.Where(predicate => predicate.StartDate.Subtract(commutationDate).Days < 0).ToList();
 
 
-            return IRRCompute(PremiumTable, PaidLossTable, IncurredLossTable, CapitalTable, 
-                BufferTable, commutationDate, 9.01930993488021/100, NewDateRange);
+            return IRRCompute(PremiumTable.Result, PaidLossTable.Result, IncurredLossTable.Result, CapitalTable.Result, 
+                BufferTable.Result, commutationDate, 9.01930993488021/100, NewDateRange);
 
 
         }
@@ -260,6 +264,9 @@ namespace IRR.Application.Service
 
         }
      
+
+
+       
 
 
 

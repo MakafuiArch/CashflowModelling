@@ -12,7 +12,7 @@ namespace IRR.Application.Service
     {
 
 
-        public IEnumerable<TResponseType> ReadFileToObject<TResponseType>(string filePath, Type[] datatypes)
+        public TResponseType ReadFileToObject<TResponseType>(string filePath, Type[] datatypes)
         {
 
             try
@@ -30,7 +30,7 @@ namespace IRR.Application.Service
                 var json = JsonConvert.SerializeObject(dfData, Formatting.Indented);
 
 
-                return JsonConvert.DeserializeObject<IEnumerable<TResponseType>>(json);
+                return JsonConvert.DeserializeObject<TResponseType>(json);
 
             }
             catch (IOException ex)

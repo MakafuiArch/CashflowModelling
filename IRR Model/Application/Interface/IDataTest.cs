@@ -3,7 +3,7 @@
     public interface IDataTest
     {
 
-        IEnumerable<TResponseType>  ReadFileToObject<TResponseType>(string filePath, Type[] datatypes);
+        TResponseType  ReadFileToObject<TResponseType>(string filePath, Type[] datatypes);
 
 
     }

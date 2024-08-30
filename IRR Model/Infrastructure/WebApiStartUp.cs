@@ -4,6 +4,7 @@ using IRR.Application.Service;
 using IRR.Domain.DBContext;
 using IRR.Infrastructure.Interface;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.OpenApi.Models;
 using System.Reflection;
 
@@ -26,8 +27,9 @@ namespace IRR.Infrastructure
 
             builder.Services.Configure<IQueryService>(builder.Configuration.GetSection("ConnectionString"));
             builder.Services.AddSingleton<IQuery, IQueryService>();
-            builder.Services.AddTransient<IIRR, ArchViewIRRService>();
-            builder.Services.AddTransient<IDataTest, TestDataRead>();
+            builder.Services.AddScoped<IIRR, ArchViewIRRService>();
+            builder.Services.AddSingleton<IMemoryCache, MemoryCache>();
+            builder.Services.AddSingleton<IDataTest, TestDataRead>();
             builder.Services.AddExceptionHandler<IRRExceptionHandler>();
             builder.Services.AddExceptionHandler<SQLExceptionHandler>();
             builder.Services.AddResponseCaching();

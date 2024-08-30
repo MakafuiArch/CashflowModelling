@@ -3,12 +3,17 @@ using IRR.Domain.DTOs;
 using Microsoft.Data.Analysis;
 using System.Numerics;
 using Excel.FinancialFunctions;
+using Microsoft.Extensions.Caching.Memory;
+using IRR.Application.Interface;
 
 
 namespace IRR.Application.Service
 {
-    public abstract class IRRCalculation
+    public abstract class IRRCalculation(IMemoryCache memoryCache, IDataTest testData)
     {
+
+        private readonly IMemoryCache _memoryCache =memoryCache;
+        private readonly IDataTest _testData=testData;
 
         /// <summary>
         /// 
@@ -357,6 +362,8 @@ namespace IRR.Application.Service
 
         public virtual void RollForward(IEnumerable<DateTime> rollFowardDates)
         {
+
+
 
         }
 
@@ -742,6 +749,22 @@ namespace IRR.Application.Service
             }
         }
 
+
+
+
+
+        public Task<TResult> GetCachedObject<TResult>(string cacheKey, 
+            string filePath, Type[] types)
+        {
+            if (!_memoryCache.TryGetValue(cacheKey, value: out TResult result))
+            {
+                 result = (TResult) _testData.ReadFileToObject<TResult>(filePath, types) ;
+
+                _memoryCache.Set(cacheKey, result, TimeSpan.FromMinutes(10)) ;
+            }
+
+            return Task.FromResult(result!);
+        }
 
     }
 }
