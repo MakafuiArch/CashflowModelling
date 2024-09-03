@@ -12,7 +12,7 @@ namespace IRR.Domain.DTOs
         private readonly int _Year = Year;
         private readonly DateTime _EarnedDay = EarnedDay;
         private readonly double? _UnadjustedPremium = UnadjustedPremium;
-        private readonly double? _EarnedPremium = EarnedPremium;
+        private double? _EarnedPremium = EarnedPremium;
         private readonly int _RetroProfileId = RetroProfileId;
         private readonly int _RetroProgramId = RetroProgramId;
         private readonly int _SPInvestorId = SPInvestorId;
@@ -30,6 +30,6 @@ namespace IRR.Domain.DTOs
 
         public double UnadjustedPremium => _UnadjustedPremium ?? 0;
 
-        public double EarnedPremium => _EarnedPremium ?? 0; 
+        public double EarnedPremium { get => _EarnedPremium ?? 0; set { _EarnedPremium = value; } }
     }
 }

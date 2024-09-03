@@ -8,7 +8,7 @@
         private readonly int _dayCount = DayCount;
         private readonly DateTime _lossPaymentDate = LossPaymentDate;
         private readonly double _unadjustedPaid = UnadjustedPaid;
-        private readonly double _paidLoss = PaidLoss;
+        private double _paidLoss = PaidLoss;
         private readonly int _RetroProfileId = RetroProfileId;
         private readonly int _RetroProgramId = RetroProgramId;
         private readonly int _SPInvestorId = SPInvestorId;
@@ -26,6 +26,6 @@
 
         public double UnadjustedPaid => _unadjustedPaid;
 
-        public double PaidLoss => _paidLoss;
+        public double PaidLoss { get => _paidLoss; set { _paidLoss = value; } }
     }
 }

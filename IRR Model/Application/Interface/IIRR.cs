@@ -17,6 +17,6 @@ namespace IRR.Application.Interface
         Task<IRRResponse> TestIRR();
 
         //subject to change on antonio finishing the economic model
-        Task<IEnumerable<LossInput>> GetLossInput(int SPInvestor, IEnumerable<int>? RetroProgramIds);
+        Task<IEnumerable<LossInput>> GetLossInput(int SPInvestor, List<int> RetroProgramIds);
     }
 }

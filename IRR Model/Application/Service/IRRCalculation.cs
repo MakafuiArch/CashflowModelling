@@ -6,6 +6,8 @@ using Microsoft.Extensions.Caching.Memory;
 using IRR.Application.Interface;
 using IRR.Application.Exceptions;
 using IRR.Application.Payload.Response;
+using LanguageExt;
+using LanguageExt.ClassInstances;
 
 
 namespace IRR.Application.Service
@@ -373,9 +375,9 @@ namespace IRR.Application.Service
 
 
 
-        public virtual IEnumerable<double> RollForward(IEnumerable<DateTime> RollFowardDates, 
-            IEnumerable<PremiumSchedule> PremiumTable, 
-            IEnumerable<IRRLossSchedule> IncurredLossTable, IEnumerable<PaidSchedule>PaidLossTable,
+        protected virtual IEnumerable<double> RollForward( IEnumerable<DateTime> RollFowardDates, 
+             IEnumerable<PremiumSchedule> PremiumTable, 
+             IEnumerable<IRRLossSchedule> IncurredLossTable,  IEnumerable<PaidSchedule>PaidLossTable,
             double TotalCapital,
             double InvestmentIncomeOnFloat,
             double CommissionRatio, 
@@ -384,23 +386,26 @@ namespace IRR.Application.Service
             )
         {
 
+
+            
+
             List<double> CumulativeExpectedEarnedProfits = [];
 
             double CumSum = 0;
 
-            Parallel.ForEach(RollFowardDates, (rollforwardDate) =>
+            Parallel.ForEach(RollFowardDates, async (rollforwardDate) =>
             {
                 Task<double> EarnedPremium = Task.Run(()=>PremiumTable.AsParallel()
-                                    .Where(c => c.EarnedDay <= rollforwardDate).Sum(c => c.EarnedPremium));
+                                    .Where(c => c.EarnedDay <= rollforwardDate).Sum(c => c.UnadjustedPremium));
 
                 Task<double> IncurredLosses = Task.Run(() => IncurredLossTable.AsParallel()
-                                     .Where(i => i.LossOccurenceDay <= rollforwardDate).Sum(i => i.IncurredLoss));
+                                     .Where(i => i.LossOccurenceDay <= rollforwardDate).Sum(i => i.UnadjustedIncurredLoss));
 
                 Task<double> PaidLosses = Task.Run(() => PaidLossTable.AsParallel()
-                                            .Where(i => i.LossPaymentDate <= rollforwardDate).Sum (i => i.PaidLoss));
+                                            .Where(i => i.LossPaymentDate <= rollforwardDate).Sum(i =>i.UnadjustedPaid));
 
 
-                Task.WhenAll(EarnedPremium, IncurredLosses, PaidLosses);
+                await Task.WhenAll(EarnedPremium, IncurredLosses, PaidLosses);
 
 
                 var AcquisitionCost = AcquisitionExpenseRate * EarnedPremium.Result;
@@ -427,13 +432,29 @@ namespace IRR.Application.Service
             });
 
 
+            Parallel.For(1, CumulativeExpectedEarnedProfits.Count, async (iterator) =>
+            {
+                Task EarnedPremTable = Task.Run(() => PremiumTable.AsParallel().Where(
+                    p => p.Year == iterator).Map(p => p.EarnedPremium =
+                    p.EarnedPremium * CumulativeExpectedEarnedProfits[iterator - 1]));
+
+                Task IncurredTable = Task.Run(() => IncurredLossTable.AsParallel().Where(i => i.Year == iterator)
+                                .Map(i => i.IncurredLoss = CumulativeExpectedEarnedProfits[iterator - 1]));
+
+                await Task.WhenAll(EarnedPremTable , IncurredTable);
+
+            });
+
+
+
             return CumulativeExpectedEarnedProfits;
+
         }
 
 
 
 
-        public virtual IEnumerable<T> GetColumnData<T>(DataFrameColumn dataFrameColumn)
+        protected virtual IEnumerable<T> GetColumnData<T>(DataFrameColumn dataFrameColumn)
         {
             for (int i = 0; i < dataFrameColumn.Length; i++)
             {
@@ -747,12 +768,14 @@ namespace IRR.Application.Service
         protected Task<TResult> GetCachedObject<TResult>(string cacheKey, 
             string filePath, Type[] types)
         {
+#pragma warning disable CS8600 
             if (!_memoryCache.TryGetValue(cacheKey, value: out TResult result))
             {
                  result = (TResult) _testData.ReadFileToObject<TResult>(filePath, types) ;
 
                 _memoryCache.Set(cacheKey, result, TimeSpan.FromMinutes(10)) ;
             }
+#pragma warning restore CS8600 
 
             return Task.FromResult(result!);
         }

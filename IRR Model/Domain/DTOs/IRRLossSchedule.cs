@@ -11,7 +11,7 @@
         private readonly int _year = Year;
         private readonly DateTime _lossOccurenceDay = LossOccurrenceDay;
         private readonly double _unadjustedIncurredLoss = UnadjustedIncurredLoss;
-        private readonly double _incurredLoss = IncurredLoss;
+        private double _incurredLoss = IncurredLoss;
         private readonly int _RetroProfileId = RetroProfileId;
         private readonly int _RetroProgramId = RetroProgramId;
         private readonly int _SPInvestorId = SPInvestorId;
@@ -30,6 +30,6 @@
 
         public double UnadjustedIncurredLoss => _unadjustedIncurredLoss;
 
-        public double IncurredLoss => _incurredLoss;
+        public double IncurredLoss { get => _incurredLoss; set { _incurredLoss = value; } }
     }
 }

@@ -274,7 +274,7 @@ namespace IRR.Application.Service
 
         public async Task<IEnumerable<LossInput>> GetLossInput(int SPInvestor, List<int>? RetroProgramIds)
         {
-            return await _queryService.ApiResponseSet<List<int>, IEnumerable<LossInput>>("", RetroProgramIds);
+            return await _queryService.ApiResponseSet<List<int>, IEnumerable<LossInput>>("", RetroProgramIds!);
         }
     }
 }
