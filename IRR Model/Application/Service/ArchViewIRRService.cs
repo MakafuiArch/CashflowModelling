@@ -1,11 +1,12 @@
 ﻿using IRR.Domain.DTOs;
 using IRR.Application.Interface;
 using Microsoft.IdentityModel.Tokens;
-using IRR.Application.Payload;
 using LanguageExt;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.AspNetCore.OutputCaching;
 using Microsoft.Identity.Client;
+using IRR.Application.Payload.Request;
+using IRR.Application.Payload.Response;
 
 
 
@@ -96,15 +97,15 @@ namespace IRR.Application.Service
 
 
 
-                var dataframeIRRResponse = await IRRCompute(PremiumTable.Result, PaidLossTable.Result,
+            var dataframeIRRResponse = await IRRCompute(PremiumTable.Result, PaidLossTable.Result,
                                         IncurredLossTable.Result, CapitalTable.Result,bufferSchedules,
                                         CommutationDate, (double) AcquisitionExpenseRate, DateRange);
 
-                responseDictionary.Add(SPInvestorId, dataframeIRRResponse.irr);
+            responseDictionary.Add(SPInvestorId, dataframeIRRResponse.irr);
 
 
 
-                return responseDictionary;
+            return responseDictionary;
         }
 
 
@@ -190,16 +191,19 @@ namespace IRR.Application.Service
         /// <param name="SPInvestorId"></param>
         /// <param name="RetroProgramIds"></param>
         /// <returns></returns>
-        //Get Paid Loss Schedule
-        private async Task<IEnumerable<PaidSchedule>> GetPaidLossSchedule(int  SPInvestorId,
+        protected override async Task<IEnumerable<PaidSchedule>> GetPaidLossSchedule(int  SPInvestorId,
                                                                     IEnumerable<int>? RetroProgramIds)
         {
             return await _queryService.QuerySet<PaidSchedule>(_queryService.GetPaidLossQuery());
         }
 
 
-        //Get all response from the loss table
-        private async Task<IEnumerable<IRRLossSchedule>> GetIRRLossSchedule(double ClimateLoading = 1)
+       /// <summary>
+       /// 
+       /// </summary>
+       /// <param name="ClimateLoading"></param>
+       /// <returns></returns>
+        protected override async Task<IEnumerable<IRRLossSchedule>> GetIRRLossSchedule(double ClimateLoading = 1)
         {
 
             return await _queryService.QuerySet<IRRLossSchedule>(
@@ -207,7 +211,11 @@ namespace IRR.Application.Service
 
         }
 
-        //Get Premium Table Inputs
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="ids"></param>
+        /// <returns></returns>
         public async Task<IEnumerable<IRRPremiumInputDTO>> GetIRRPremiumInput(IEnumerable<int>? ids)
         {
             FormattableString _queryString = ids.IsNullOrEmpty()
@@ -233,24 +241,24 @@ namespace IRR.Application.Service
         /// <param name="RetroProgramIds"></param>
         /// <returns></returns>
         //Get Premium Schedule
-        private async Task<IEnumerable<PremiumSchedule>> GetPremiumSchedule(int SPInvestorId,
+        protected override async Task<IEnumerable<PremiumSchedule>> GetPremiumSchedule(int SPInvestorId,
                                                                     IEnumerable<int>? RetroProgramIds)
-        {
+        { 
             return await _queryService.QuerySet<PremiumSchedule>(_queryService.GetPremiumScheduleQuery());
         }
 
-        private async Task<IEnumerable<IRRPremiumInputDTO>> GetIRRPremiumInput(
+        protected override async Task<IEnumerable<IRRPremiumInputDTO>> GetIRRPremiumInput(
                                                                     int SPInvestor, 
                                                                     IEnumerable<int>? RetroProgramIds)
         {
+
             return await _queryService.QuerySet<IRRPremiumInputDTO>(_queryService.GetIRRPremiumString());
         }
 
 
 
-        private async Task<IEnumerable<CapitalSchedule>> GetCapitalSchedule()
+        protected override async Task<IEnumerable<CapitalSchedule>> GetCapitalSchedule()
         {
-
             //var capitalschedule = _queryService.ApiResponseSet<CapitalSchedule>()
 
             return await _queryService.QuerySet<CapitalSchedule>(_queryService.GetCapitalScheduleQuery());
@@ -258,18 +266,15 @@ namespace IRR.Application.Service
         }
 
 
-        private async Task<IEnumerable<BufferSchedule>> GetBufferSchedule()
+        protected override async Task<IEnumerable<BufferSchedule>> GetBufferSchedule()
         {
             return await _queryService.QuerySet<BufferSchedule>(_queryService.GetBufferQuery());
 
         }
-     
 
-
-       
-
-
-
-
+        public async Task<IEnumerable<LossInput>> GetLossInput(int SPInvestor, List<int>? RetroProgramIds)
+        {
+            return await _queryService.ApiResponseSet<List<int>, IEnumerable<LossInput>>("", RetroProgramIds);
+        }
     }
 }

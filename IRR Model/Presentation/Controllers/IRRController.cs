@@ -1,9 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
 using IRR.Domain.DTOs;
 using IRR.Application.Interface;
-using IRR.Application.Payload;
 using Microsoft.Data.SqlClient;
 using Microsoft.AspNetCore.OutputCaching;
+using IRR.Application.Payload.Request;
+using IRR.Application.Payload.Response;
 
 
 

@@ -5,8 +5,7 @@
 
         Task<IEnumerable<T>> QuerySet<T>(FormattableString query);
 
-        Task<TResponseType> ApiResponseSet<TDataType, TResponseType>(String apiURL, TDataType datatype) 
-            where TDataType : class, IConvertible where TResponseType : class, IConvertible;
+        Task<TResponseType> ApiResponseSet<TDataType, TResponseType>(String apiURL, TDataType datatype);
 
         FormattableString GetIRRPremiumString();
         FormattableString GetIRRLossScheduleQuery(double ClimateLoading);

@@ -1,10 +1,11 @@
-﻿using IRR.Application.Payload;
-using IRR.Domain.DTOs;
+﻿using IRR.Domain.DTOs;
 using Microsoft.Data.Analysis;
 using System.Numerics;
 using Excel.FinancialFunctions;
 using Microsoft.Extensions.Caching.Memory;
 using IRR.Application.Interface;
+using IRR.Application.Exceptions;
+using IRR.Application.Payload.Response;
 
 
 namespace IRR.Application.Service
@@ -15,19 +16,31 @@ namespace IRR.Application.Service
         private readonly IMemoryCache _memoryCache =memoryCache;
         private readonly IDataTest _testData=testData;
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="PremiumTable"></param>
-        /// <param name="PaidLossTable"></param>
-        /// <param name="IncurredLossTable"></param>
-        /// <param name="CapitalTable"></param>
-        /// <param name="BufferTab"></param>
-        /// <param name="CommutationDate"></param>
-        /// <param name="AcquisitonExpenseRate"></param>
-        /// <param name="DateRange"></param>
-        /// <returns></returns>
-        public async Task<IRRResponse> IRRCompute(IEnumerable<PremiumSchedule> PremiumTable,
+
+
+
+        protected abstract Task<IEnumerable<PaidSchedule>> GetPaidLossSchedule(int SPInvestorId,
+                                                           IEnumerable<int>? RetroProgram);
+
+
+        protected abstract Task<IEnumerable<IRRLossSchedule>> GetIRRLossSchedule(double ClimateLoading = 1);
+
+
+        protected abstract Task<IEnumerable<PremiumSchedule>> GetPremiumSchedule(int SPInvestorId,
+                                                                    IEnumerable<int>? RetroProgramIds);
+
+        protected abstract Task<IEnumerable<IRRPremiumInputDTO>> GetIRRPremiumInput(
+                                                                    int SPInvestor,
+                                                                    IEnumerable<int>? RetroProgramIds);
+
+
+        protected abstract Task<IEnumerable<CapitalSchedule>> GetCapitalSchedule();
+
+
+        protected abstract Task<IEnumerable<BufferSchedule>> GetBufferSchedule();
+
+
+        protected async Task<IRRResponse> IRRCompute(IEnumerable<PremiumSchedule> PremiumTable,
                                            IEnumerable<PaidSchedule> PaidLossTable,
                                            IEnumerable<IRRLossSchedule> IncurredLossTable,
                                            IEnumerable<CapitalSchedule> CapitalTable,
@@ -360,11 +373,61 @@ namespace IRR.Application.Service
 
 
 
-        public virtual void RollForward(IEnumerable<DateTime> rollFowardDates)
+        public virtual IEnumerable<double> RollForward(IEnumerable<DateTime> RollFowardDates, 
+            IEnumerable<PremiumSchedule> PremiumTable, 
+            IEnumerable<IRRLossSchedule> IncurredLossTable, IEnumerable<PaidSchedule>PaidLossTable,
+            double TotalCapital,
+            double InvestmentIncomeOnFloat,
+            double CommissionRatio, 
+            double AcquisitionExpenseRate, 
+            double BufferFactor
+            )
         {
 
+            List<double> CumulativeExpectedEarnedProfits = [];
+
+            double CumSum = 0;
+
+            Parallel.ForEach(RollFowardDates, (rollforwardDate) =>
+            {
+                Task<double> EarnedPremium = Task.Run(()=>PremiumTable.AsParallel()
+                                    .Where(c => c.EarnedDay <= rollforwardDate).Sum(c => c.EarnedPremium));
+
+                Task<double> IncurredLosses = Task.Run(() => IncurredLossTable.AsParallel()
+                                     .Where(i => i.LossOccurenceDay <= rollforwardDate).Sum(i => i.IncurredLoss));
+
+                Task<double> PaidLosses = Task.Run(() => PaidLossTable.AsParallel()
+                                            .Where(i => i.LossPaymentDate <= rollforwardDate).Sum (i => i.PaidLoss));
 
 
+                Task.WhenAll(EarnedPremium, IncurredLosses, PaidLosses);
+
+
+                var AcquisitionCost = AcquisitionExpenseRate * EarnedPremium.Result;
+
+                var CommissionCost = (EarnedPremium.Result - AcquisitionExpenseRate) * CommissionRatio;
+
+
+                var ExpectedProfitCommission = Math.Max(EarnedPremium.Result - AcquisitionCost
+                                                - CommissionCost - IncurredLosses.Result + InvestmentIncomeOnFloat, 0);
+
+
+                var ExpectedEarned = EarnedPremium.Result - AcquisitionCost - CommissionCost + InvestmentIncomeOnFloat
+                                    - ExpectedProfitCommission - IncurredLosses.Result - PaidLosses.Result - 
+                                    (IncurredLosses.Result - PaidLosses.Result)*BufferFactor; 
+
+
+                lock(CumulativeExpectedEarnedProfits) 
+                {
+                    CumSum += ExpectedEarned;
+                    CumulativeExpectedEarnedProfits.Add(ExpectedEarned/CumSum);
+                }
+                
+
+            });
+
+
+            return CumulativeExpectedEarnedProfits;
         }
 
 
@@ -384,7 +447,7 @@ namespace IRR.Application.Service
 
 
 
-        public virtual DataFrameColumn DataFrameLag(string ColumnName, DataFrameColumn dataframeColumn, double DefaultFirst = 0)
+        protected virtual DataFrameColumn DataFrameLag(string ColumnName, DataFrameColumn dataframeColumn, double DefaultFirst = 0)
         {
             var lagList = new PrimitiveDataFrameColumn<double>(ColumnName, dataframeColumn.Length);
 
@@ -409,7 +472,7 @@ namespace IRR.Application.Service
         }
 
 
-        public virtual async Task<IEnumerable<double>> GrossEarnedPremiumTable(
+        protected virtual async Task<IEnumerable<double>> GrossEarnedPremiumTable(
             IEnumerable<DateTuple> DateRange,
             IEnumerable<PremiumSchedule> IRRPremiumTable, DateTime CommutationDate)
         {
@@ -419,14 +482,8 @@ namespace IRR.Application.Service
             return await CumulativeTable(DateRange, GrossEarnedPremium, CommutationDate);
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="DateRange"></param>
-        /// <param name="IRRLossTable"></param>
-        /// <param name="CommutationDate"></param>
-        /// <returns></returns>
-        public virtual async Task<IEnumerable<double>> IncurredLossTable(IEnumerable<DateTuple> DateRange,
+      
+        protected virtual async Task<IEnumerable<double>> IncurredLossTable(IEnumerable<DateTuple> DateRange,
             IEnumerable<IRRLossSchedule> IRRLossTable, DateTime CommutationDate)
         {
             var CurrentIncurredLoss = DateRange.AsParallel().Select(datetuple => this.CurrentIncurredLoss(datetuple.StartDate,
@@ -437,15 +494,7 @@ namespace IRR.Application.Service
 
 
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="DateRange"></param>
-        /// <param name="PaidLosses"></param>
-        /// <param name="CommutationDate"></param>
-        /// <returns></returns>
-        //Returns the cumulative Paid Loss table
-        public virtual async Task<IEnumerable<double>> PaidLossTable(IEnumerable<DateTuple> DateRange,
+        protected virtual async Task<IEnumerable<double>> PaidLossTable(IEnumerable<DateTuple> DateRange,
             IEnumerable<PaidSchedule> PaidLosses, DateTime CommutationDate)
         {
             var CurrentPaidLoss = DateRange.AsParallel().Select(datetuple => this.CurrentPaidLoss(datetuple.StartDate,
@@ -455,7 +504,7 @@ namespace IRR.Application.Service
         }
 
 
-        public virtual async Task<IEnumerable<double>> Contributions(IEnumerable<CapitalSchedule> CapitalSchedule,
+        protected virtual async Task<IEnumerable<double>> Contributions(IEnumerable<CapitalSchedule> CapitalSchedule,
             IEnumerable<Tuple<DateTime, DateTime>> CashflowRange)
         {
 
@@ -472,13 +521,9 @@ namespace IRR.Application.Service
             return await Task.FromResult<IEnumerable<double>>(diffCumList);
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="BufferSchedule"></param>
-        /// <param name="DateRange"></param>
-        /// <returns></returns>
-        public virtual async Task<List<float>> BuffersTab(IEnumerable<BufferSchedule> BufferSchedule,
+      
+
+        protected virtual async Task<List<float>> BuffersTab(IEnumerable<BufferSchedule> BufferSchedule,
             IEnumerable<DateTuple> DateRange)
         {
 
@@ -509,16 +554,8 @@ namespace IRR.Application.Service
         }
 
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="StartDate"></param>
-        /// <param name="EndDate"></param>
-        /// <param name="CommutationDate"></param>
-        /// <param name="IRRPremiumTable"></param>
-        /// <returns></returns>
-        //Calculate Gross Earned premium over all entries for the premium schedule
-        public virtual double GrossEarnedPremium(DateTime StartDate,
+     
+        protected virtual double GrossEarnedPremium(DateTime StartDate,
             DateTime EndDate,
             DateTime CommutationDate, IEnumerable<PremiumSchedule> IRRPremiumTable)
         {
@@ -541,15 +578,8 @@ namespace IRR.Application.Service
         }
 
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="StartDate"></param>
-        /// <param name="EndDate"></param>
-        /// <param name="CommutationDate"></param>
-        /// <param name="IRRLossSchedules"></param>
-        /// <returns></returns>
-        public virtual double CurrentIncurredLoss(DateTime StartDate, DateTime EndDate,
+
+        protected virtual double CurrentIncurredLoss(DateTime StartDate, DateTime EndDate,
             DateTime CommutationDate, IEnumerable<IRRLossSchedule> IRRLossSchedules)
         {
 
@@ -575,16 +605,7 @@ namespace IRR.Application.Service
 
 
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="StartDate"> </param>
-        /// <param name="EndDate"></param>
-        /// <param name="CommutationDate"></param>
-        /// <param name="PaidLossSchedules"></param>
-        /// <returns></returns>
-        //Calculate PaidLoss without accumulation
-        public virtual double CurrentPaidLoss(DateTime StartDate, DateTime EndDate,
+        protected virtual double CurrentPaidLoss(DateTime StartDate, DateTime EndDate,
             DateTime CommutationDate, IEnumerable<PaidSchedule> PaidLossSchedules)
         {
 
@@ -610,7 +631,7 @@ namespace IRR.Application.Service
         }
 
 
-        public virtual double GetContribution(Tuple<DateTime, DateTime> DateRange, IEnumerable<CapitalSchedule> CapitalSchedule)
+        protected virtual double GetContribution(Tuple<DateTime, DateTime> DateRange, IEnumerable<CapitalSchedule> CapitalSchedule)
         {
             var yearcapital = CapitalSchedule.AsParallel()
                 .Where(c => c.Date >= DateRange.Item1 && c.Date < DateRange.Item2).ToList();
@@ -622,14 +643,8 @@ namespace IRR.Application.Service
 
         }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="timeTuple"></param>
-        /// <param name="values"></param>
-        /// <param name="CommutationDate"></param>
-        /// <returns></returns>
-        public virtual async Task<IEnumerable<double>> CumulativeTable(IEnumerable<DateTuple> timeTuple,
+        
+        protected virtual async Task<IEnumerable<double>> CumulativeTable(IEnumerable<DateTuple> timeTuple,
             IEnumerable<double> values, DateTime CommutationDate)
         {
             var IncurDateTuple = timeTuple.Zip(values).Select(value => new LossPremTuple(value.Item1.StartDate, value.Item2)).ToList();
@@ -640,15 +655,11 @@ namespace IRR.Application.Service
         }
 
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <typeparam name="P"></typeparam>
-        /// <param name="list1"></param>
-        /// <param name="list2"></param>
-        /// <returns></returns>
-        public virtual List<Tuple<T, P>> ListsToTuple<T, P>(IEnumerable<T> list1,
+
+
+      
+
+        protected virtual List<Tuple<T, P>> ListsToTuple<T, P>(IEnumerable<T> list1,
             IEnumerable<P> list2)
         {
 
@@ -664,14 +675,7 @@ namespace IRR.Application.Service
 
 
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="numbers"></param>
-        /// <returns></returns>
-        //Compute the cumulative sum of a numeric list
-        public virtual IEnumerable<T> CumulativeSum<T>(IEnumerable<T> numbers) where T : INumber<T>
+        protected virtual IEnumerable<T> CumulativeSum<T>(IEnumerable<T> numbers) where T : INumber<T>
         {
             T sum = T.Zero;
 
@@ -685,13 +689,8 @@ namespace IRR.Application.Service
 
 
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="numbers"></param>
-        /// <param name="CommutationDate"></param>
-        /// <returns></returns>
-        public virtual List<double> CumulativeSum(IEnumerable<LossPremTuple> numbers,
+
+        protected virtual List<double> CumulativeSum(IEnumerable<LossPremTuple> numbers,
             DateTime CommutationDate)
         {
             double sum = 0;
@@ -714,16 +713,16 @@ namespace IRR.Application.Service
         }
 
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="list1"></param>
-        /// <param name="list2"></param>
-        /// <returns></returns>
-        public virtual IEnumerable<T> AddListItems<T>(IEnumerable<T> list1, IEnumerable<T> list2)
+
+        protected virtual IEnumerable<T> AddListItems<T>(IEnumerable<T> list1, IEnumerable<T> list2)
             where T : INumber<T>
         {
+
+            if(list1.Count() != list2.Count())
+            {
+                throw new LengthEqualityException("Ensure lengths of lists are equal");
+            }
+
             foreach (var (number1, number2) in ListsToTuple<T, T>(list1, list2))
             {
                 yield return number1 + number2;
@@ -731,15 +730,7 @@ namespace IRR.Application.Service
         }
 
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="list1"></param>
-        /// <param name="list2"></param>
-        /// <param name="reverse"></param>
-        /// <returns></returns>
-        public virtual IEnumerable<T> SubtractListItems<T>(IEnumerable<T> list1,
+        protected virtual IEnumerable<T> SubtractListItems<T>(IEnumerable<T> list1,
             IEnumerable<T> list2, bool reverse = false)
             where T : INumber<T>
         {
@@ -753,7 +744,7 @@ namespace IRR.Application.Service
 
 
 
-        public Task<TResult> GetCachedObject<TResult>(string cacheKey, 
+        protected Task<TResult> GetCachedObject<TResult>(string cacheKey, 
             string filePath, Type[] types)
         {
             if (!_memoryCache.TryGetValue(cacheKey, value: out TResult result))

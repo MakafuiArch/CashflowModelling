@@ -2,7 +2,7 @@
 using LanguageExt;
 
 
-namespace IRR.Application.Payload
+namespace IRR.Application.Payload.Request
 {
     public record IRRInputs(
         int Duration,

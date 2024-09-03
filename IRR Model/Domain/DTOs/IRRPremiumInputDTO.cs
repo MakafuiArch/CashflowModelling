@@ -9,7 +9,7 @@ namespace IRR.Domain.DTOs
         int RetroProfileId,
         int RetroProgramId,
         String LayerInception,
-        Decimal TotalSubjectPremium)
+        double TotalSubjectPremium)
     {
 
         [Model(ColumnName = "SPInvestor")]
@@ -25,7 +25,7 @@ namespace IRR.Domain.DTOs
         public String LayerInception { get; set; } = LayerInception;
 
         [Model(ColumnName = "TotalSubjectPremium")]
-        public Decimal TotalSubjectPremium { get; set; } = TotalSubjectPremium;
+        public double TotalSubjectPremium { get; set; } = TotalSubjectPremium;
 
 
 

@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.Data.SqlClient;
-using IRR.Application.Payload;
+using IRR.Application.Payload.Response;
 
 namespace IRR.Application.Exceptions
 {

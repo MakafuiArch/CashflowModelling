@@ -1,8 +1,8 @@
-﻿namespace IRR.Application.Payload
+﻿namespace IRR.Application.Payload.Request
 {
     public record MultipleIRRRequest(
-        
-        
+
+
         )
     {
     }

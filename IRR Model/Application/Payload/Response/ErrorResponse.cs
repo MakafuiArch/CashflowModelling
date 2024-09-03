@@ -1,4 +1,4 @@
-﻿namespace IRR.Application.Payload
+﻿namespace IRR.Application.Payload.Response
 {
     public record ErrorResponse(
 

@@ -1,5 +1,5 @@
-﻿using IRR.Application.Payload;
-using FluentValidation;
+﻿using FluentValidation;
+using IRR.Application.Payload.Request;
 
 
 namespace IRR.Application.Service

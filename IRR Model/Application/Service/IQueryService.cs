@@ -1,15 +1,18 @@
 ﻿using Dapper;
 using Microsoft.Data.SqlClient;
 using IRR.Application.Interface;
+using Microsoft.Extensions.Caching.Memory;
 
 
 
 namespace IRR.Application.Service
 {
-    public class IQueryService(IConfiguration configuration) : IQuery
+    public class IQueryService(IConfiguration configuration, IMemoryCache memoryCache) : IQuery
     {
 
         private readonly IConfiguration _configuration = configuration;
+
+        private readonly IMemoryCache _memoryCache = memoryCache;
 
         public FormattableString GetIRRLossScheduleQuery(double ClimateLoading) => $@"
 
@@ -277,8 +280,8 @@ namespace IRR.Application.Service
 
 
         public async Task<TResponseType> ApiResponseSet<TDataType, TResponseType>(String apiURL, TDataType datatype)
-             where TDataType : class, IConvertible where TResponseType : class, IConvertible
         {
+
             var Apiservice = new APIService<TDataType, TResponseType>(apiURL, datatype);
 
             return await Apiservice.GetAPIResponse();
