@@ -6,7 +6,7 @@ namespace IRR.Domain.DTOs
         int LayerId,
         DateTime LayerInception, 
         DateTime OccurrenceDay, 
-        double SubjectLoss, 
+        double SubjectLoss,
         double ReinstPremium
         
         )
@@ -22,6 +22,7 @@ namespace IRR.Domain.DTOs
         public DateTime OccurrenceDay => _occurrenceDay;
         public double SubjectLoss => _subjectLoss;
         public double ReinstPremium => _reinstPremium;
+
 
         public int LayerId => _layerId; 
 

@@ -5,7 +5,11 @@ namespace IRR.Application.Payload.Response
 
 
     [Serializable]
-    public record IRRResponse(double irr, IEnumerable<CashFlow> cashflows)
+    public record IRRResponse(double irr, double InvestmentIncomeOnFloat, 
+        double InvestmentIncomeOnCapital, 
+        IEnumerable<CashFlow> cashflows)
     {
+
+
     }
 }

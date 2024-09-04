@@ -7,39 +7,138 @@ using IRR.Application.Interface;
 using IRR.Application.Exceptions;
 using IRR.Application.Payload.Response;
 using LanguageExt;
-using LanguageExt.ClassInstances;
+using Joker.Extensions;
+using IRR.Application.Payload.Request;
 
 
 namespace IRR.Application.Service
 {
-    public abstract class IRRCalculation(IMemoryCache memoryCache, IDataTest testData)
+    public abstract class IRRCalculation(IQuery queryService, IMemoryCache memoryCache, 
+        IDataTest testData, IConfiguration configuration)
     {
 
         private readonly IMemoryCache _memoryCache =memoryCache;
         private readonly IDataTest _testData=testData;
+        private readonly IQuery _queryService= queryService;
+        private readonly IConfiguration _configuration=configuration;
 
 
 
+        protected async Task<IEnumerable<PremiumSchedule>> GetPremiumSchedule(IEnumerable<LossInput> LossInputs,
+            IEnumerable<PremiumInput> PremiumInputs,
+            int PremiumView=0, int PremiumFrequency = 0)
+        {
 
-        protected abstract Task<IEnumerable<PaidSchedule>> GetPaidLossSchedule(int SPInvestorId,
-                                                           IEnumerable<int>? RetroProgram);
+            List<PremiumServiceResponse> premiumServiceResponses = [];
+            List<PremiumSchedule> premiumSchedules = [];
+
+            var UniqueLayerIds = LossInputs.AsParallel().Select(p => (p.LayerId, PremiumInputs.AsParallel().Find(r => 
+                                (r.LayerInception==p.LayerInception)&(r.LayerId == p.LayerId))
+                                .First().TotalSubjectPremium)).Distinct();
+
+            UniqueLayerIds.AsParallel().ForEach(async p =>
+            {
+
+                var premiumrequest = new PremiumServiceRequest(p.LayerId, p.TotalSubjectPremium, PremiumView, PremiumFrequency);
+
+                var premiumresponse = await GetDepositPremium(premiumrequest);
+
+                lock (premiumServiceResponses)
+                {
+
+                    premiumServiceResponses.Add(premiumresponse);
+
+                }
+
+            });
+
+            LossInputs.AsParallel().ForEach((loss) => { 
+            
+                
+            
+            });
 
 
-        protected abstract Task<IEnumerable<IRRLossSchedule>> GetIRRLossSchedule(double ClimateLoading = 1);
+
+            throw new NotImplementedException();
+
+        }
+        
 
 
-        protected abstract Task<IEnumerable<PremiumSchedule>> GetPremiumSchedule(int SPInvestorId,
-                                                                    IEnumerable<int>? RetroProgramIds);
 
-        protected abstract Task<IEnumerable<IRRPremiumInputDTO>> GetIRRPremiumInput(
+        protected async Task<PremiumServiceResponse> GetDepositPremium(PremiumServiceRequest request)
+        {
+            return await _queryService.ApiResponseSet<PremiumServiceRequest, 
+                PremiumServiceResponse>(_configuration.GetValue<string>("ConnectionString:PremiumService")!, request);
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="SPInvestorId"></param>
+        /// <param name="RetroProgramIds"></param>
+        /// <returns></returns>
+        protected async Task<IEnumerable<PaidSchedule>> GetPaidLossSchedule(int SPInvestorId,
+                                                                    IEnumerable<int>? RetroProgramIds)
+        {
+            return await _queryService.QuerySet<PaidSchedule>(_queryService.GetPaidLossQuery());
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="ClimateLoading"></param>
+        /// <returns></returns>
+        protected async Task<IEnumerable<IRRLossSchedule>> GetIRRLossSchedule(double ClimateLoading = 1)
+        {
+
+            return await _queryService.QuerySet<IRRLossSchedule>(
+                _queryService.GetIRRLossScheduleQuery(ClimateLoading));
+
+        }
+
+      
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="SPInvestorId"></param>
+        /// <param name="RetroProgramIds"></param>
+        /// <returns></returns>
+        //Get Premium Schedule
+        protected async Task<IEnumerable<PremiumSchedule>> GetPremiumSchedule(int SPInvestorId,
+                                                                    IEnumerable<int>? RetroProgramIds)
+        {
+            return await _queryService.QuerySet<PremiumSchedule>(_queryService.GetPremiumScheduleQuery());
+        }
+
+        protected async Task<IEnumerable<IRRPremiumInputDTO>> GetIRRPremiumInput(
                                                                     int SPInvestor,
-                                                                    IEnumerable<int>? RetroProgramIds);
+                                                                    IEnumerable<int>? RetroProgramIds)
+        {
+
+            return await _queryService.QuerySet<IRRPremiumInputDTO>(_queryService.GetIRRPremiumString());
+        }
 
 
-        protected abstract Task<IEnumerable<CapitalSchedule>> GetCapitalSchedule();
+
+        protected  async Task<IEnumerable<CapitalSchedule>> GetCapitalSchedule()
+        {
+            //var capitalschedule = _queryService.ApiResponseSet<CapitalSchedule>()
+
+            return await _queryService.QuerySet<CapitalSchedule>(_queryService.GetCapitalScheduleQuery());
+
+        }
 
 
-        protected abstract Task<IEnumerable<BufferSchedule>> GetBufferSchedule();
+        protected async Task<IEnumerable<BufferSchedule>> GetBufferSchedule()
+        {
+            return await _queryService.QuerySet<BufferSchedule>(_queryService.GetBufferQuery());
+
+        }
 
 
         protected async Task<IRRResponse> IRRCompute(IEnumerable<PremiumSchedule> PremiumTable,
@@ -61,6 +160,8 @@ namespace IRR.Application.Service
 
 
             var CashFlowEndRange = DateRange.Select(p => p.EndDate).ToList();
+
+            var BufferStartDate = BufferTab.OrderBy(p => p.BufferDate).First().BufferDate;
 
 
 
@@ -346,17 +447,55 @@ namespace IRR.Application.Service
 
 
 
+            var CashFlowDates = new DateTimeDataFrameColumn("CashFlow Dates", CashFlowDataFrame.Rows.Count);
 
 
-            Microsoft.Data.Analysis.DataFrame.SaveCsv(CashFlowDataFrame, "C:/Users/maheto/OneDrive - " +
-                "Arch Capital Group/Desktop/Work Files/Cashflow Modelling/TestData.csv");
+            for (int i = 0; i < CashFlowDataFrame.Rows.Count; i++)
+            {
+                if ((DateTime)CashFlowDataFrame["Period End Date"][i] < BufferStartDate)
+                {
+                    CashFlowDates[i] = (DateTime)CashFlowDataFrame["Period Start Date"][i];
+                }
+                else
+                {
+                    CashFlowDates[i] = (DateTime)CashFlowDataFrame["Period End Date"][i];
+                }
+            }
 
+            CashFlowDataFrame.Columns.Add(CashFlowDates);
+
+
+            CashFlowDataFrame["CashFlow Dates"][1] = new DateTime(2024, 6, 1);
+
+            var BasePath = "C:/Users/maheto/OneDrive - Arch Capital Group/Desktop/Work Files/Cashflow Modelling/";
+
+            var filePath = BasePath + "TestData.csv";
+
+            var newFilePath = filePath;
+
+            int counter = 1;
+
+
+            while (File.Exists(newFilePath))
+            {
+
+                newFilePath = BasePath + Path.GetFileNameWithoutExtension(filePath) + $"({counter})".ToString() + 
+                    Path.GetExtension(filePath);
+
+                counter++;
+
+            }
+
+ 
+            Microsoft.Data.Analysis.DataFrame.SaveCsv(CashFlowDataFrame, newFilePath);
 
             List<CashFlow> cashflows = [];
 
-            var investorCashflow = GetColumnData<double>(CashFlowDataFrame["Investor Cashflow"]);
+            var investorCashflow = GetColumnData<double>(CashFlowDataFrame["Investor Cashflow"]).ToList();
 
-            var cashflowDates = GetColumnData<DateTime>(CashFlowDataFrame["Period Start Date"]);
+            var cashflowDates = GetColumnData<DateTime>(CashFlowDataFrame["CashFlow Dates"]).ToList();
+
+            
 
             for (int iterator = 0; iterator < CashFlowDataFrame.Rows.Count; iterator++)
             {
@@ -364,7 +503,10 @@ namespace IRR.Application.Service
             }
 
 
-            var response = new IRRResponse(Financial.XIrr(investorCashflow, cashflowDates), cashflows);
+            var response = new IRRResponse(Financial.XIrr(investorCashflow, cashflowDates),
+               (double) CashFlowDataFrame["Investment Income on Float"].Sum(),
+               (double) CashFlowDataFrame["Investment Income On Capital"].Sum(),
+                cashflows);
 
 
             return response;
@@ -375,7 +517,7 @@ namespace IRR.Application.Service
 
 
 
-        protected virtual IEnumerable<double> RollForward( IEnumerable<DateTime> RollFowardDates, 
+        protected virtual IEnumerable<double> RollForward( IEnumerable<RollForwardInput> RollForwardInputs, 
              IEnumerable<PremiumSchedule> PremiumTable, 
              IEnumerable<IRRLossSchedule> IncurredLossTable,  IEnumerable<PaidSchedule>PaidLossTable,
             double TotalCapital,
@@ -393,16 +535,16 @@ namespace IRR.Application.Service
 
             double CumSum = 0;
 
-            Parallel.ForEach(RollFowardDates, async (rollforwardDate) =>
+            Parallel.ForEach(RollForwardInputs, async (rollforwardInput) =>
             {
                 Task<double> EarnedPremium = Task.Run(()=>PremiumTable.AsParallel()
-                                    .Where(c => c.EarnedDay <= rollforwardDate).Sum(c => c.UnadjustedPremium));
+                                    .Where(c => c.EarnedDay <= rollforwardInput.RollForwardDate).Sum(c => c.UnadjustedPremium));
 
                 Task<double> IncurredLosses = Task.Run(() => IncurredLossTable.AsParallel()
-                                     .Where(i => i.LossOccurenceDay <= rollforwardDate).Sum(i => i.UnadjustedIncurredLoss));
+                                     .Where(i => i.LossOccurenceDay <= rollforwardInput.RollForwardDate).Sum(i => i.UnadjustedIncurredLoss));
 
                 Task<double> PaidLosses = Task.Run(() => PaidLossTable.AsParallel()
-                                            .Where(i => i.LossPaymentDate <= rollforwardDate).Sum(i =>i.UnadjustedPaid));
+                                            .Where(i => i.LossPaymentDate <= rollforwardInput.RollForwardDate).Sum(i =>i.UnadjustedPaid));
 
 
                 await Task.WhenAll(EarnedPremium, IncurredLosses, PaidLosses);
@@ -431,21 +573,51 @@ namespace IRR.Application.Service
 
             });
 
-
+           
             Parallel.For(1, CumulativeExpectedEarnedProfits.Count, async (iterator) =>
             {
-                Task EarnedPremTable = Task.Run(() => PremiumTable.AsParallel().Where(
-                    p => p.Year == iterator).Map(p => p.EarnedPremium =
-                    p.EarnedPremium * CumulativeExpectedEarnedProfits[iterator - 1]));
 
-                Task IncurredTable = Task.Run(() => IncurredLossTable.AsParallel().Where(i => i.Year == iterator)
-                                .Map(i => i.IncurredLoss = CumulativeExpectedEarnedProfits[iterator - 1]));
+                var RollForward = RollForwardInputs.ElementAt(iterator).ApplyRollForward ? CumulativeExpectedEarnedProfits[iterator - 1] : 1;
 
-                await Task.WhenAll(EarnedPremTable , IncurredTable);
+                Task EarnedPremTable = Task.Run(() => PremiumTable.AsParallel().ForEach(p =>
+                {
+                    if (p.Year - 1 != iterator)
+                    {
+                        return;
+                    }
+                    p.EarnedPremium = p.UnadjustedPremium * RollForward;
+                }));
+
+                Task IncurredTable = Task.Run(() => IncurredLossTable.AsParallel().ForEach(i =>
+                {
+                    if (i.Year - 1 != iterator)
+                    {
+                        return;
+                    }
+                    i.IncurredLoss = i.UnadjustedIncurredLoss * RollForward;
+                }));
+
+                await Task.WhenAll(IncurredTable, EarnedPremTable);
 
             });
 
 
+            PremiumTable.AsParallel().ForEach(p =>
+            {
+                if (p.EarnedPremium == 0)
+                {
+                    p.EarnedPremium = p.UnadjustedPremium;
+                }
+            });
+
+            IncurredLossTable.ForEach(i => { 
+            
+                if(i.IncurredLoss == 0)
+                {
+                    i.IncurredLoss = i.UnadjustedIncurredLoss;
+                }
+                
+            });
 
             return CumulativeExpectedEarnedProfits;
 
@@ -453,16 +625,16 @@ namespace IRR.Application.Service
 
 
 
-
-        protected virtual IEnumerable<T> GetColumnData<T>(DataFrameColumn dataFrameColumn)
+        protected virtual IEnumerable<T> GetColumnData<T>(DataFrameColumn column)
         {
-            for (int i = 0; i < dataFrameColumn.Length; i++)
+            
+
+            for (int i = 0; i < column.Length; i++)
             {
 
-                yield return (T)dataFrameColumn[i];
+                yield return (T)column[i];
 
             }
-
 
         }
 

@@ -3,23 +3,29 @@ using IRR.Application.Interface;
 using Microsoft.IdentityModel.Tokens;
 using LanguageExt;
 using Microsoft.Extensions.Caching.Memory;
-using Microsoft.AspNetCore.OutputCaching;
-using Microsoft.Identity.Client;
 using IRR.Application.Payload.Request;
 using IRR.Application.Payload.Response;
-
-
 
 
 
 namespace IRR.Application.Service
 {
 
-    public sealed class ArchViewIRRService(IQuery queryService,
-        IDataTest testData, IMemoryCache memoryCache) : IRRCalculation(memoryCache, testData), IIRR
+    public sealed class ArchViewIRRService: IRRCalculation, IIRR
     {
 
-        private readonly IQuery _queryService = queryService;
+        private readonly IQuery _queryService;
+        
+
+        public ArchViewIRRService(IQuery queryService, IDataTest testData, IConfiguration configuration,
+            IMemoryCache memoryCache)
+            : base(queryService, memoryCache, testData, configuration)
+        {
+           
+           _queryService = queryService;
+
+        }
+
 
         public async Task<Dictionary<int, double>> GetIRRForSPInvestor(IRRInputs input)
         {
@@ -33,7 +39,6 @@ namespace IRR.Application.Service
             var AcquisitionExpenseRate = input.AcquisitionExpense;
 
             var bufferSchedule = new List<BufferSchedule>();
-
 
             return await IRRCashFlow(StartDate, EndDate, CommutationDate, RetroProgramIds!, 
                 SPInvestorId, Capital, bufferSchedule, AcquisitionExpenseRate);
@@ -96,10 +101,13 @@ namespace IRR.Application.Service
             await Task.WhenAll(PremiumTable, PaidLossTable, IncurredLossTable, CapitalTable);
 
 
+            var BufferDate = bufferSchedules.OrderBy(p => p.BufferDate).First().BufferDate;
+
+
 
             var dataframeIRRResponse = await IRRCompute(PremiumTable.Result, PaidLossTable.Result,
                                         IncurredLossTable.Result, CapitalTable.Result,bufferSchedules,
-                                        CommutationDate, (double) AcquisitionExpenseRate, DateRange);
+                                        CommutationDate,  (double) AcquisitionExpenseRate, DateRange);
 
             responseDictionary.Add(SPInvestorId, dataframeIRRResponse.irr);
 
@@ -183,34 +191,6 @@ namespace IRR.Application.Service
 
         }
 
-
-        //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="SPInvestorId"></param>
-        /// <param name="RetroProgramIds"></param>
-        /// <returns></returns>
-        protected override async Task<IEnumerable<PaidSchedule>> GetPaidLossSchedule(int  SPInvestorId,
-                                                                    IEnumerable<int>? RetroProgramIds)
-        {
-            return await _queryService.QuerySet<PaidSchedule>(_queryService.GetPaidLossQuery());
-        }
-
-
-       /// <summary>
-       /// 
-       /// </summary>
-       /// <param name="ClimateLoading"></param>
-       /// <returns></returns>
-        protected override async Task<IEnumerable<IRRLossSchedule>> GetIRRLossSchedule(double ClimateLoading = 1)
-        {
-
-            return await _queryService.QuerySet<IRRLossSchedule>(
-                _queryService.GetIRRLossScheduleQuery(ClimateLoading));
-
-        }
-
         /// <summary>
         /// 
         /// </summary>
@@ -234,43 +214,9 @@ namespace IRR.Application.Service
 
 
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="SPInvestorId"></param>
-        /// <param name="RetroProgramIds"></param>
-        /// <returns></returns>
-        //Get Premium Schedule
-        protected override async Task<IEnumerable<PremiumSchedule>> GetPremiumSchedule(int SPInvestorId,
-                                                                    IEnumerable<int>? RetroProgramIds)
-        { 
-            return await _queryService.QuerySet<PremiumSchedule>(_queryService.GetPremiumScheduleQuery());
-        }
 
-        protected override async Task<IEnumerable<IRRPremiumInputDTO>> GetIRRPremiumInput(
-                                                                    int SPInvestor, 
-                                                                    IEnumerable<int>? RetroProgramIds)
-        {
+        //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-            return await _queryService.QuerySet<IRRPremiumInputDTO>(_queryService.GetIRRPremiumString());
-        }
-
-
-
-        protected override async Task<IEnumerable<CapitalSchedule>> GetCapitalSchedule()
-        {
-            //var capitalschedule = _queryService.ApiResponseSet<CapitalSchedule>()
-
-            return await _queryService.QuerySet<CapitalSchedule>(_queryService.GetCapitalScheduleQuery());
-            
-        }
-
-
-        protected override async Task<IEnumerable<BufferSchedule>> GetBufferSchedule()
-        {
-            return await _queryService.QuerySet<BufferSchedule>(_queryService.GetBufferQuery());
-
-        }
 
         public async Task<IEnumerable<LossInput>> GetLossInput(int SPInvestor, List<int>? RetroProgramIds)
         {
