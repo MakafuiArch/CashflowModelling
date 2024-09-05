@@ -4,31 +4,42 @@ using System.Runtime.Serialization;
 namespace IRR.Domain.DTOs
 {
     [Serializable]
-    public class PremiumSchedule(int RetroProfileId, int RetroProgramId,
+    public class PremiumSchedule
+    {
+        private  int _Year;
+        private  DateTime _EarnedDay;
+        private  double? _UnadjustedPremium;
+        private double? _EarnedPremium;
+        private  int _LayerId;
+
+
+        public PremiumSchedule()
+        {
+
+        }
+
+
+        public PremiumSchedule(int LayerId, int RetroProgramId,
         int SPInvestorId,
         DateTime EarnedDay, double UnadjustedPremium,
         double EarnedPremium, int Year)
-    {
-        private readonly int _Year = Year;
-        private readonly DateTime _EarnedDay = EarnedDay;
-        private readonly double? _UnadjustedPremium = UnadjustedPremium;
-        private double? _EarnedPremium = EarnedPremium;
-        private readonly int _RetroProfileId = RetroProfileId;
-        private readonly int _RetroProgramId = RetroProgramId;
-        private readonly int _SPInvestorId = SPInvestorId;
+        {
+            _Year = Year;
+            _EarnedDay = EarnedDay;
+            _LayerId = LayerId;
+            _UnadjustedPremium = UnadjustedPremium;
+            _EarnedDay = EarnedDay;
+
+        }
 
 
 
-        public int RetroProfileId => _RetroProfileId;
+        public int LayerId {get => _LayerId; set => _LayerId = value; }
 
-        public int RetroProgramId => _RetroProgramId;
+        public int Year {get => _Year; set => _Year = value; }
+        public DateTime EarnedDay { get => _EarnedDay; set { _EarnedDay = value; } }
 
-        public int SPInvestorId => _SPInvestorId;
-
-        public int Year => _Year;
-        public DateTime EarnedDay => _EarnedDay;
-
-        public double UnadjustedPremium => _UnadjustedPremium ?? 0;
+        public double UnadjustedPremium { get => _UnadjustedPremium ?? 0; set { _UnadjustedPremium = value; } }
 
         public double EarnedPremium { get => _EarnedPremium ?? 0; set { _EarnedPremium = value; } }
     }

@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using System.Net.Http.Headers;
+using System.Text;
 
 
 
@@ -16,11 +17,15 @@ namespace IRR.Application.Service
         public async Task<TResponseType> GetAPIResponse()
         {
 
+
+            
+
+
             var SerializedObject = JsonSerializer.Serialize(this._dataType);
 
             HttpClient client = new()
             {
-                BaseAddress = new Uri(this._apiURL)
+                BaseAddress = new Uri(_apiURL)
             };
 
             client.DefaultRequestHeaders.Accept.Add(
@@ -29,12 +34,13 @@ namespace IRR.Application.Service
                 );
 
 
-            HttpResponseMessage response = client.PostAsync(_apiURL,  new StringContent(SerializedObject)).Result;
+            HttpResponseMessage response = await client.PostAsync(_apiURL,  
+                new StringContent(SerializedObject, Encoding.UTF8, "application/json"));
 
 
             if (response.IsSuccessStatusCode) {
 
-                return (await JsonSerializer.DeserializeAsync<TResponseType>(response.Content.ReadAsStream()).AsTask().ConfigureAwait(false))!;
+                return (await response.Content.ReadFromJsonAsync<TResponseType>())!;
 
             }
             else

@@ -18,23 +18,6 @@ namespace IRR.Presentation.Controllers
         private readonly IIRR _irrService = irrService;
         private readonly IDataTest _testData = testData;
 
-
- 
-        [HttpPost("getpremiums")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        [ProducesErrorResponseType(typeof(SqlException))]
-        [ResponseCache(VaryByHeader ="User-Agent", Duration=30)]
-        [OutputCache]
-        public IEnumerable<IRRPremiumInputDTO> GetPremium([FromBody] List<int> ids)
-        {
-            IEnumerable<IRRPremiumInputDTO> PremiumInputs = _irrService.GetIRRPremiumInput(ids).GetAwaiter().GetResult();
-            return PremiumInputs;
-        }
-
-
-
         /// <summary>
         /// 
         /// </summary>
@@ -82,6 +65,15 @@ namespace IRR.Presentation.Controllers
             return _irrService.TestIRR();
         }
 
+        [HttpPost("test-premiumservice")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        [ResponseCache(VaryByHeader = "User-Agent", Duration = 30)]
+        [OutputCache]
+        public Task<PremiumServiceResponse> PremiumServiceResponse() {
+            return _irrService.TestGetDepositPremiums();
+        }
 
 
     }

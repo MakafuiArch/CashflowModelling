@@ -275,7 +275,7 @@ namespace IRR.Application.Service
             var con = new SqlConnection(_configuration.GetValue<string>("ConnectionString:Revoreader"));
 
             return await con.QueryAsync<T>(query.ToString());
-
+            
         }
 
 

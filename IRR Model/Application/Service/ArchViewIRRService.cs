@@ -222,5 +222,12 @@ namespace IRR.Application.Service
         {
             return await _queryService.ApiResponseSet<List<int>, IEnumerable<LossInput>>("", RetroProgramIds!);
         }
+
+        public async Task<PremiumServiceResponse> TestGetDepositPremiums()
+        {
+
+            var premiumrequest = new PremiumServiceRequest(89695, 4500, 0, 0);
+            return await GetDepositPremium(premiumrequest);
+        }
     }
 }

@@ -24,7 +24,7 @@ namespace IRR.Application.Service
 
 
 
-        protected async Task<IEnumerable<PremiumSchedule>> GetPremiumSchedule(IEnumerable<LossInput> LossInputs,
+        protected IEnumerable<PremiumSchedule> GetPremiumSchedule(IEnumerable<LossInput> LossInputs,
             IEnumerable<PremiumInput> PremiumInputs,
             int PremiumView=0, int PremiumFrequency = 0)
         {
@@ -32,8 +32,10 @@ namespace IRR.Application.Service
             List<PremiumServiceResponse> premiumServiceResponses = [];
             List<PremiumSchedule> premiumSchedules = [];
 
-            var UniqueLayerIds = LossInputs.AsParallel().Select(p => (p.LayerId, PremiumInputs.AsParallel().Find(r => 
-                                (r.LayerInception==p.LayerInception)&(r.LayerId == p.LayerId))
+            var OccurrenceYear = LossInputs.Map(loss => loss.LayerInception.Year).OrderBy(y => y).ToList();
+
+            var UniqueLayerIds = LossInputs.AsParallel().Select(p => (p.LayerId, PremiumInputs.AsParallel().Find(r =>
+                                (r.LayerInception == p.LayerInception) & (r.LayerId == p.LayerId))
                                 .First().TotalSubjectPremium)).Distinct();
 
             UniqueLayerIds.AsParallel().ForEach(async p =>
@@ -52,15 +54,28 @@ namespace IRR.Application.Service
 
             });
 
-            LossInputs.AsParallel().ForEach((loss) => { 
-            
-                
+            LossInputs.AsParallel().ForEach((loss) => {
+
+                var UnadjustedPremium = loss.ReinstPremium + (double) premiumServiceResponses.AsParallel().Map(p =>
+                                            p.PremiumValues.AsParallel().Find(k => (k.LayerId == loss.LayerId) 
+                                            & (k.Date == loss.OccurrenceDay)).Select(k => k.Value)).FirstOrDefault();
+
+
+                var premiumschedule = new PremiumSchedule
+                {
+                    Year = OccurrenceYear.IndexOf(loss.LayerInception.Year) + 1,
+                    LayerId = loss.LayerId,
+                    UnadjustedPremium = UnadjustedPremium,
+                    EarnedDay = loss.OccurrenceDay
+                };
+
+                premiumSchedules.Add(premiumschedule);
             
             });
 
 
 
-            throw new NotImplementedException();
+            return premiumSchedules;
 
         }
         
