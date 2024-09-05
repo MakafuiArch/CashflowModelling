@@ -18,4 +18,13 @@
     <ProjectReference Include="..\IRRTest\IRRTest.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Application\Interface\" />
+    <Folder Include="Application\Service\" />
+    <Folder Include="Domain\DTO\" />
+    <Folder Include="Domain\Model\" />
+    <Folder Include="Infrastracture\" />
+    <Folder Include="Persistence\" />
+  </ItemGroup>
+
 </Project>

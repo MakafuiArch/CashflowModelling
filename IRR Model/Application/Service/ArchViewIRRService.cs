@@ -93,7 +93,7 @@ namespace IRR.Application.Service
             Task<IEnumerable<PaidSchedule>> PaidLossTable = this.GetPaidLossSchedule(SPInvestorId,
                                                                                 RetroProgramIds);
 
-            Task<IEnumerable<IRRLossSchedule>> IncurredLossTable = this.GetIRRLossSchedule();
+            Task<IEnumerable<LossSchedule>> IncurredLossTable = this.GetIRRLossSchedule();
 
             Task<IEnumerable<CapitalSchedule>> CapitalTable = this.GetCapitalSchedule();
 
@@ -138,7 +138,7 @@ namespace IRR.Application.Service
             var PremiumTable = GetCachedObject<IEnumerable<PremiumSchedule>>("PremiumTable", "C:/Users/maheto/OneDrive - " +
                 "Arch Capital Group/Desktop/Work Files/Cashflow Modelling/PremiumScheduleTest.csv", premiumTypes);
 
-            var IncurredLossTable = GetCachedObject<IEnumerable<IRRLossSchedule>>("IncurredLossTable","C:/Users/maheto/OneDrive - " +
+            var IncurredLossTable = GetCachedObject<IEnumerable<LossSchedule>>("IncurredLossTable","C:/Users/maheto/OneDrive - " +
                 "Arch Capital Group/Desktop/Work Files/Cashflow Modelling/LossScheduleTest.csv", incurredLossTypes);
 
             var PaidLossTable = GetCachedObject<IEnumerable<PaidSchedule>>("PaidLossTable", "C:/Users/maheto/OneDrive - " +

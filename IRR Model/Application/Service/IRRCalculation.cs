@@ -9,6 +9,7 @@ using IRR.Application.Payload.Response;
 using LanguageExt;
 using Joker.Extensions;
 using IRR.Application.Payload.Request;
+using System.Collections.Concurrent;
 
 
 namespace IRR.Application.Service
@@ -24,13 +25,39 @@ namespace IRR.Application.Service
 
 
 
+        protected IEnumerable<PaidSchedule> GetPaidLossSchedule(IEnumerable<LossInput> LossInputs)
+        {
+
+            var UniqueIds = LossInputs.AsParallel().Select(loss => loss.LayerId).Distinct();
+
+            Parallel.ForEach(UniqueIds, Id =>
+            {
+
+                var LossSum = LossInputs.AsParallel().Where(p => p.LayerId == Id).Select(p => p.SubjectLoss).Sum();
+
+                var AverageTicks = (long) LossInputs.AsParallel().Where(p => p.LayerId == Id)
+                                             .Select(p => p.OccurrenceDay.Ticks).Average();
+
+                DateTime AverageOccurrenceDate = new(AverageTicks);
+
+
+
+            });
+
+
+            throw new NotImplementedException();
+        }
+
+
+
         protected IEnumerable<PremiumSchedule> GetPremiumSchedule(IEnumerable<LossInput> LossInputs,
             IEnumerable<PremiumInput> PremiumInputs,
             int PremiumView=0, int PremiumFrequency = 0)
         {
 
-            List<PremiumServiceResponse> premiumServiceResponses = [];
             List<PremiumSchedule> premiumSchedules = [];
+
+            var concurrentPremResponse = new ConcurrentBag<PremiumServiceResponse>();
 
             var OccurrenceYear = LossInputs.Map(loss => loss.LayerInception.Year).OrderBy(y => y).ToList();
 
@@ -38,21 +65,18 @@ namespace IRR.Application.Service
                                 (r.LayerInception == p.LayerInception) & (r.LayerId == p.LayerId))
                                 .First().TotalSubjectPremium)).Distinct();
 
-            UniqueLayerIds.AsParallel().ForEach(async p =>
+            Parallel.ForEach(UniqueLayerIds, async p =>
             {
 
                 var premiumrequest = new PremiumServiceRequest(p.LayerId, p.TotalSubjectPremium, PremiumView, PremiumFrequency);
 
                 var premiumresponse = await GetDepositPremium(premiumrequest);
 
-                lock (premiumServiceResponses)
-                {
-
-                    premiumServiceResponses.Add(premiumresponse);
-
-                }
+                concurrentPremResponse.Add(premiumresponse);
 
             });
+
+            var premiumServiceResponses = concurrentPremResponse.ToList();
 
             LossInputs.AsParallel().ForEach((loss) => {
 
@@ -107,10 +131,10 @@ namespace IRR.Application.Service
         /// </summary>
         /// <param name="ClimateLoading"></param>
         /// <returns></returns>
-        protected async Task<IEnumerable<IRRLossSchedule>> GetIRRLossSchedule(double ClimateLoading = 1)
+        protected async Task<IEnumerable<LossSchedule>> GetIRRLossSchedule(double ClimateLoading = 1)
         {
 
-            return await _queryService.QuerySet<IRRLossSchedule>(
+            return await _queryService.QuerySet<LossSchedule>(
                 _queryService.GetIRRLossScheduleQuery(ClimateLoading));
 
         }
@@ -158,7 +182,7 @@ namespace IRR.Application.Service
 
         protected async Task<IRRResponse> IRRCompute(IEnumerable<PremiumSchedule> PremiumTable,
                                            IEnumerable<PaidSchedule> PaidLossTable,
-                                           IEnumerable<IRRLossSchedule> IncurredLossTable,
+                                           IEnumerable<LossSchedule> IncurredLossTable,
                                            IEnumerable<CapitalSchedule> CapitalTable,
                                            IEnumerable<BufferSchedule> BufferTab,
                                            DateTime CommutationDate,
@@ -534,7 +558,7 @@ namespace IRR.Application.Service
 
         protected virtual IEnumerable<double> RollForward( IEnumerable<RollForwardInput> RollForwardInputs, 
              IEnumerable<PremiumSchedule> PremiumTable, 
-             IEnumerable<IRRLossSchedule> IncurredLossTable,  IEnumerable<PaidSchedule>PaidLossTable,
+             IEnumerable<LossSchedule> IncurredLossTable,  IEnumerable<PaidSchedule>PaidLossTable,
             double TotalCapital,
             double InvestmentIncomeOnFloat,
             double CommissionRatio, 
@@ -692,7 +716,7 @@ namespace IRR.Application.Service
 
       
         protected virtual async Task<IEnumerable<double>> IncurredLossTable(IEnumerable<DateTuple> DateRange,
-            IEnumerable<IRRLossSchedule> IRRLossTable, DateTime CommutationDate)
+            IEnumerable<LossSchedule> IRRLossTable, DateTime CommutationDate)
         {
             var CurrentIncurredLoss = DateRange.AsParallel().Select(datetuple => this.CurrentIncurredLoss(datetuple.StartDate,
                             datetuple.EndDate, CommutationDate, IRRLossTable)).ToList();
@@ -788,7 +812,7 @@ namespace IRR.Application.Service
 
 
         protected virtual double CurrentIncurredLoss(DateTime StartDate, DateTime EndDate,
-            DateTime CommutationDate, IEnumerable<IRRLossSchedule> IRRLossSchedules)
+            DateTime CommutationDate, IEnumerable<LossSchedule> IRRLossSchedules)
         {
 
             if (StartDate.Subtract(CommutationDate).Days > 0)
@@ -844,10 +868,10 @@ namespace IRR.Application.Service
             var yearcapital = CapitalSchedule.AsParallel()
                 .Where(c => c.Date >= DateRange.Item1 && c.Date < DateRange.Item2).ToList();
 
-            var oldcaprital = CapitalSchedule.AsParallel().Where(c => c.Date < DateRange.Item1).ToList();
+            var oldcapital = CapitalSchedule.AsParallel().Where(c => c.Date < DateRange.Item1).ToList();
 
 
-            return yearcapital.Union(oldcaprital).Sum(c => c.IncrementalCapitalAdded);
+            return yearcapital.Union(oldcapital).Sum(c => c.IncrementalCapitalAdded);
 
         }
 

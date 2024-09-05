@@ -1,6 +1,6 @@
 ﻿namespace IRR.Domain.DTOs
 {
-    public class IRRLossSchedule(int RetroProfileId, 
+    public class LossSchedule(int RetroProfileId, 
         int RetroProgramId,
         int SPInvestorId, int Year, 
         DateTime LossOccurrenceDay, 

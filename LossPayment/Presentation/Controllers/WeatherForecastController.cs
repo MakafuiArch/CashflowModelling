@@ -1,6 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 
-namespace LossPayment.Controllers
+namespace LossPayment.Presentation.Controllers
 {
     [ApiController]
     [Route("[controller]")]
