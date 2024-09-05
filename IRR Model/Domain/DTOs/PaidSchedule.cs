@@ -1,30 +1,36 @@
 ﻿namespace IRR.Domain.DTOs
 {
     [Serializable]
-    public class PaidSchedule(int RetroProfileId, int RetroProgramId,
-        int SPInvestorId,int DayCount, DateTime LossPaymentDate,
-        double UnadjustedPaid, double PaidLoss)
+    public class PaidSchedule
     {
-        private readonly int _dayCount = DayCount;
-        private readonly DateTime _lossPaymentDate = LossPaymentDate;
-        private readonly double _unadjustedPaid = UnadjustedPaid;
-        private double _paidLoss = PaidLoss;
-        private readonly int _RetroProfileId = RetroProfileId;
-        private readonly int _RetroProgramId = RetroProgramId;
-        private readonly int _SPInvestorId = SPInvestorId;
+        private int _dayCount;
+        private DateTime _lossPaymentDate;
+        private double _unadjustedPaid;
+        private double _paidLoss;
 
 
 
-        public int RetroProfileId => _RetroProfileId;
 
-        public int RetroProgramId => _RetroProgramId;
+        public PaidSchedule()
+        {
 
-        public int SPInvestorId => _SPInvestorId;
+        }
 
-        public int DayCount => _dayCount;
-        public DateTime LossPaymentDate => _lossPaymentDate;
+        public PaidSchedule(int DayCount, DateTime LossPaymentDate,
+        double UnadjustedPaid, double PaidLoss)
+        {
+            _dayCount = DayCount;
+            _lossPaymentDate = LossPaymentDate;
+            _unadjustedPaid = UnadjustedPaid;
+            _paidLoss = PaidLoss;
+        }
 
-        public double UnadjustedPaid => _unadjustedPaid;
+
+
+        public int DayCount { get => _dayCount; set => _dayCount = value; }
+        public DateTime LossPaymentDate { get => _lossPaymentDate; set => _lossPaymentDate = value; }
+
+        public double UnadjustedPaid {get => _unadjustedPaid; set => _unadjustedPaid = value; }
 
         public double PaidLoss { get => _paidLoss; set { _paidLoss = value; } }
     }

@@ -23,163 +23,6 @@ namespace IRR.Application.Service
         private readonly IQuery _queryService= queryService;
         private readonly IConfiguration _configuration=configuration;
 
-
-
-        protected IEnumerable<PaidSchedule> GetPaidLossSchedule(IEnumerable<LossInput> LossInputs)
-        {
-
-            var UniqueIds = LossInputs.AsParallel().Select(loss => loss.LayerId).Distinct();
-
-            Parallel.ForEach(UniqueIds, Id =>
-            {
-
-                var LossSum = LossInputs.AsParallel().Where(p => p.LayerId == Id).Select(p => p.SubjectLoss).Sum();
-
-                var AverageTicks = (long) LossInputs.AsParallel().Where(p => p.LayerId == Id)
-                                             .Select(p => p.OccurrenceDay.Ticks).Average();
-
-                DateTime AverageOccurrenceDate = new(AverageTicks);
-
-
-
-            });
-
-
-            throw new NotImplementedException();
-        }
-
-
-
-        protected IEnumerable<PremiumSchedule> GetPremiumSchedule(IEnumerable<LossInput> LossInputs,
-            IEnumerable<PremiumInput> PremiumInputs,
-            int PremiumView=0, int PremiumFrequency = 0)
-        {
-
-            List<PremiumSchedule> premiumSchedules = [];
-
-            var concurrentPremResponse = new ConcurrentBag<PremiumServiceResponse>();
-
-            var OccurrenceYear = LossInputs.Map(loss => loss.LayerInception.Year).OrderBy(y => y).ToList();
-
-            var UniqueLayerIds = LossInputs.AsParallel().Select(p => (p.LayerId, PremiumInputs.AsParallel().Find(r =>
-                                (r.LayerInception == p.LayerInception) & (r.LayerId == p.LayerId))
-                                .First().TotalSubjectPremium)).Distinct();
-
-            Parallel.ForEach(UniqueLayerIds, async p =>
-            {
-
-                var premiumrequest = new PremiumServiceRequest(p.LayerId, p.TotalSubjectPremium, PremiumView, PremiumFrequency);
-
-                var premiumresponse = await GetDepositPremium(premiumrequest);
-
-                concurrentPremResponse.Add(premiumresponse);
-
-            });
-
-            var premiumServiceResponses = concurrentPremResponse.ToList();
-
-            LossInputs.AsParallel().ForEach((loss) => {
-
-                var UnadjustedPremium = loss.ReinstPremium + (double) premiumServiceResponses.AsParallel().Map(p =>
-                                            p.PremiumValues.AsParallel().Find(k => (k.LayerId == loss.LayerId) 
-                                            & (k.Date == loss.OccurrenceDay)).Select(k => k.Value)).FirstOrDefault();
-
-
-                var premiumschedule = new PremiumSchedule
-                {
-                    Year = OccurrenceYear.IndexOf(loss.LayerInception.Year) + 1,
-                    LayerId = loss.LayerId,
-                    UnadjustedPremium = UnadjustedPremium,
-                    EarnedDay = loss.OccurrenceDay
-                };
-
-                premiumSchedules.Add(premiumschedule);
-            
-            });
-
-
-
-            return premiumSchedules;
-
-        }
-        
-
-
-
-        protected async Task<PremiumServiceResponse> GetDepositPremium(PremiumServiceRequest request)
-        {
-            return await _queryService.ApiResponseSet<PremiumServiceRequest, 
-                PremiumServiceResponse>(_configuration.GetValue<string>("ConnectionString:PremiumService")!, request);
-        }
-
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="SPInvestorId"></param>
-        /// <param name="RetroProgramIds"></param>
-        /// <returns></returns>
-        protected async Task<IEnumerable<PaidSchedule>> GetPaidLossSchedule(int SPInvestorId,
-                                                                    IEnumerable<int>? RetroProgramIds)
-        {
-            return await _queryService.QuerySet<PaidSchedule>(_queryService.GetPaidLossQuery());
-        }
-
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="ClimateLoading"></param>
-        /// <returns></returns>
-        protected async Task<IEnumerable<LossSchedule>> GetIRRLossSchedule(double ClimateLoading = 1)
-        {
-
-            return await _queryService.QuerySet<LossSchedule>(
-                _queryService.GetIRRLossScheduleQuery(ClimateLoading));
-
-        }
-
-      
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="SPInvestorId"></param>
-        /// <param name="RetroProgramIds"></param>
-        /// <returns></returns>
-        //Get Premium Schedule
-        protected async Task<IEnumerable<PremiumSchedule>> GetPremiumSchedule(int SPInvestorId,
-                                                                    IEnumerable<int>? RetroProgramIds)
-        {
-            return await _queryService.QuerySet<PremiumSchedule>(_queryService.GetPremiumScheduleQuery());
-        }
-
-        protected async Task<IEnumerable<IRRPremiumInputDTO>> GetIRRPremiumInput(
-                                                                    int SPInvestor,
-                                                                    IEnumerable<int>? RetroProgramIds)
-        {
-
-            return await _queryService.QuerySet<IRRPremiumInputDTO>(_queryService.GetIRRPremiumString());
-        }
-
-
-
-        protected  async Task<IEnumerable<CapitalSchedule>> GetCapitalSchedule()
-        {
-            //var capitalschedule = _queryService.ApiResponseSet<CapitalSchedule>()
-
-            return await _queryService.QuerySet<CapitalSchedule>(_queryService.GetCapitalScheduleQuery());
-
-        }
-
-
-        protected async Task<IEnumerable<BufferSchedule>> GetBufferSchedule()
-        {
-            return await _queryService.QuerySet<BufferSchedule>(_queryService.GetBufferQuery());
-
-        }
-
-
         protected async Task<IRRResponse> IRRCompute(IEnumerable<PremiumSchedule> PremiumTable,
                                            IEnumerable<PaidSchedule> PaidLossTable,
                                            IEnumerable<LossSchedule> IncurredLossTable,
@@ -551,6 +394,190 @@ namespace IRR.Application.Service
             return response;
 
 
+
+        }
+
+
+        protected virtual IEnumerable<PaidSchedule> GetPaidLossSchedule(IEnumerable<LossInput> LossInputs)
+        {
+
+            var UniqueIds = LossInputs.AsParallel().Select(loss => loss.LayerId).Distinct();
+
+            var DayCount = LossInputs.AsParallel().Map(loss => loss.LayerInception.Year).Order().Distinct().ToList();
+
+
+            var PaidLoss = new List<PaidLossResponse>();
+
+
+            Parallel.ForEach(UniqueIds, async Id =>
+            {
+
+                var LossSum = LossInputs.AsParallel().Where(p => p.LayerId == Id).Select(p => p.SubjectLoss).Sum();
+
+                var AverageTicks = (long)LossInputs.AsParallel().Where(p => p.LayerId == Id)
+                                             .Select(p => p.OccurrenceDay.Ticks).Average();
+
+                DateTime AverageOccurrenceDate = new(AverageTicks);
+
+                var request = new PaidLossRequest(Id, LossSum, AverageOccurrenceDate);
+
+                var response = await GetLossPayments(request);
+
+                lock (PaidLoss)
+                {
+
+                    PaidLoss.AddRange(response);
+
+                }
+
+            });
+
+            var PaidLossSchedule = PaidLoss.GroupBy(p => p.OccurrenceDay)
+                                            .Map(loss => new PaidSchedule
+                                            {
+                                                LossPaymentDate = loss.Key, 
+                                                UnadjustedPaid = loss.Sum(p => p.PaidLoss)
+                                            }).ToList();
+
+
+            _ = PaidLossSchedule.OrderBy(p => p.LossPaymentDate).All(p => { p.DayCount = PaidLossSchedule.IndexOf(p); return true; });
+
+            return PaidLossSchedule;
+        }
+
+
+
+        protected virtual IEnumerable<PremiumSchedule> GetPremiumSchedule(IEnumerable<LossInput> LossInputs,
+            IEnumerable<PremiumInput> PremiumInputs,
+            int PremiumView = 0, int PremiumFrequency = 0)
+        {
+
+            var premiumSchedules = new ConcurrentBag<PremiumSchedule>();
+
+            var concurrentPremResponse = new ConcurrentBag<PremiumServiceResponse>();
+
+            var OccurrenceYear = LossInputs.Map(loss => loss.LayerInception.Year).OrderBy(y => y).Distinct().ToList();
+
+            var UniqueLayerIds = LossInputs.AsParallel().Select(p => (p.LayerId, PremiumInputs.AsParallel().Find(r =>
+                                (r.LayerInception == p.LayerInception) & (r.LayerId == p.LayerId))
+                                .First().TotalSubjectPremium)).Distinct();
+
+            Parallel.ForEach(UniqueLayerIds, async p =>
+            {
+
+                var premiumrequest = new PremiumServiceRequest(p.LayerId, p.TotalSubjectPremium, PremiumView, PremiumFrequency);
+
+                var premiumresponse = await GetDepositPremium(premiumrequest);
+
+                concurrentPremResponse.Add(premiumresponse);
+
+            });
+
+            var premiumServiceResponses = concurrentPremResponse.ToList();
+
+            Parallel.ForEach(LossInputs, (loss) => {
+
+                var UnadjustedPremium = loss.ReinstPremium + (double)premiumServiceResponses.AsParallel().Map(p =>
+                                            p.PremiumValues.AsParallel().Find(k => (k.LayerId == loss.LayerId)
+                                            & (k.Date == loss.OccurrenceDay)).Select(k => k.Value)).FirstOrDefault();
+
+
+                var premiumschedule = new PremiumSchedule
+                {
+                    Year = OccurrenceYear.IndexOf(loss.LayerInception.Year) + 1,
+                    LayerId = loss.LayerId,
+                    UnadjustedPremium = UnadjustedPremium,
+                    EarnedDay = loss.OccurrenceDay
+                };
+
+                premiumSchedules.Add(premiumschedule);
+
+            });
+
+
+
+            return premiumSchedules;
+
+        }
+
+
+        protected async Task<IEnumerable<PaidLossResponse>> GetLossPayments(PaidLossRequest request)
+        {
+            return await _queryService.ApiResponseSet<PaidLossRequest,
+                IEnumerable<PaidLossResponse>>(_configuration.GetValue<string>("ConnectionString:LossService")!, request);
+        }
+
+
+        protected async Task<PremiumServiceResponse> GetDepositPremium(PremiumServiceRequest request)
+        {
+            return await _queryService.ApiResponseSet<PremiumServiceRequest,
+                PremiumServiceResponse>(_configuration.GetValue<string>("ConnectionString:PremiumService")!, request);
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="SPInvestorId"></param>
+        /// <param name="RetroProgramIds"></param>
+        /// <returns></returns>
+        protected async Task<IEnumerable<PaidSchedule>> GetPaidLossSchedule(int SPInvestorId,
+                                                                    IEnumerable<int>? RetroProgramIds)
+        {
+            return await _queryService.QuerySet<PaidSchedule>(_queryService.GetPaidLossQuery());
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="ClimateLoading"></param>
+        /// <returns></returns>
+        protected async Task<IEnumerable<LossSchedule>> GetIRRLossSchedule(double ClimateLoading = 1)
+        {
+
+            return await _queryService.QuerySet<LossSchedule>(
+                _queryService.GetIRRLossScheduleQuery(ClimateLoading));
+
+        }
+
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="SPInvestorId"></param>
+        /// <param name="RetroProgramIds"></param>
+        /// <returns></returns>
+        //Get Premium Schedule
+        protected async Task<IEnumerable<PremiumSchedule>> GetPremiumSchedule(int SPInvestorId,
+                                                                    IEnumerable<int>? RetroProgramIds)
+        {
+            return await _queryService.QuerySet<PremiumSchedule>(_queryService.GetPremiumScheduleQuery());
+        }
+
+        protected async Task<IEnumerable<IRRPremiumInputDTO>> GetIRRPremiumInput(
+                                                                    int SPInvestor,
+                                                                    IEnumerable<int>? RetroProgramIds)
+        {
+
+            return await _queryService.QuerySet<IRRPremiumInputDTO>(_queryService.GetIRRPremiumString());
+        }
+
+
+
+        protected async Task<IEnumerable<CapitalSchedule>> GetCapitalSchedule()
+        {
+            //var capitalschedule = _queryService.ApiResponseSet<CapitalSchedule>()
+
+            return await _queryService.QuerySet<CapitalSchedule>(_queryService.GetCapitalScheduleQuery());
+
+        }
+
+
+        protected async Task<IEnumerable<BufferSchedule>> GetBufferSchedule()
+        {
+            return await _queryService.QuerySet<BufferSchedule>(_queryService.GetBufferQuery());
 
         }
 

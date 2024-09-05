@@ -121,13 +121,13 @@ namespace IRR.Application.Service
         public Task<IRRResponse> TestIRR()
         {
 
-            Type[] premiumTypes = [typeof(int), typeof(int), typeof(int), typeof(DateTime),
+            Type[] premiumTypes = [typeof(DateTime),
                 typeof(double), typeof(double), typeof(int)];
 
-            Type[] paidLossTypes = [typeof(int), typeof(int), typeof(int), typeof(int), typeof(DateTime),
+            Type[] paidLossTypes = [ typeof(int), typeof(DateTime),
                 typeof(double), typeof(double)];
 
-            Type[] incurredLossTypes = [typeof(int), typeof(int), typeof(int), typeof(int), typeof(DateTime),
+            Type[] incurredLossTypes = [ typeof(int), typeof(DateTime),
                 typeof(double), typeof(double)];
 
             Type[] capitalTypes = [typeof(int), typeof(double), typeof(DateTime)];
