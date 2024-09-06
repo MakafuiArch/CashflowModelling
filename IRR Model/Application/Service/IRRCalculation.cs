@@ -401,10 +401,16 @@ namespace IRR.Application.Service
         protected virtual IEnumerable<PaidSchedule> GetPaidLossSchedule(IEnumerable<LossInput> LossInputs)
         {
 
-            var UniqueIds = LossInputs.AsParallel().Select(loss => loss.LayerId).Distinct();
+            IEnumerable<int> UniqueIds = [];
+            IEnumerable<int> DayCount = [];
 
-            var DayCount = LossInputs.AsParallel().Map(loss => loss.LayerInception.Year).Order().Distinct().ToList();
 
+            Parallel.Invoke(
+
+                () => { UniqueIds = LossInputs.AsParallel().Select(loss => loss.LayerId).Distinct(); },
+                () => { DayCount = LossInputs.AsParallel().Map(loss => loss.LayerInception.Year).Order().Distinct().ToList(); }
+
+                );
 
             var PaidLoss = new List<PaidLossResponse>();
 
@@ -687,22 +693,38 @@ namespace IRR.Application.Service
             });
 
 
-            PremiumTable.AsParallel().ForEach(p =>
-            {
-                if (p.EarnedPremium == 0)
-                {
-                    p.EarnedPremium = p.UnadjustedPremium;
-                }
-            });
 
-            IncurredLossTable.ForEach(i => { 
+            Parallel.Invoke(
+
+                () => {
+                    PremiumTable.AsParallel().ForEach(p =>
+                    {
+                        if (p.EarnedPremium == 0)
+                        {
+                            p.EarnedPremium = p.UnadjustedPremium;
+                        }
+                    });
+                },
+
+                () => {
+
+                    IncurredLossTable.ForEach(i => {
+
+                        if (i.IncurredLoss == 0)
+                        {
+                            i.IncurredLoss = i.UnadjustedIncurredLoss;
+                        }
+
+                    });
+
+
+
+                } );
+
+
+           
+
             
-                if(i.IncurredLoss == 0)
-                {
-                    i.IncurredLoss = i.UnadjustedIncurredLoss;
-                }
-                
-            });
 
             return CumulativeExpectedEarnedProfits;
 

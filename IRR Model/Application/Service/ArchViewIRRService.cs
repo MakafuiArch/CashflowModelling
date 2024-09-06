@@ -146,24 +146,41 @@ namespace IRR.Application.Service
             Type[] bufferTypes = [typeof(int), typeof(float), typeof(DateTime)];
 
 
-            var PremiumTable = GetCachedObject<IEnumerable<PremiumSchedule>>("PremiumTable", "C:/Users/maheto/OneDrive - " +
-                "Arch Capital Group/Desktop/Work Files/Cashflow Modelling/PremiumScheduleTest.csv", premiumTypes);
+            IEnumerable<PremiumSchedule> PremiumTable = [];
+            IEnumerable<LossSchedule> IncurredLossTable = [];
+            IEnumerable<PaidSchedule> PaidLossTable = [];
+            IEnumerable<CapitalSchedule> CapitalTable = [];
+            IEnumerable<BufferSchedule> BufferTable = [];
 
-            var IncurredLossTable = GetCachedObject<IEnumerable<LossSchedule>>("IncurredLossTable","C:/Users/maheto/OneDrive - " +
-                "Arch Capital Group/Desktop/Work Files/Cashflow Modelling/LossScheduleTest.csv", incurredLossTypes);
+            Parallel.Invoke(
 
-            var PaidLossTable = GetCachedObject<IEnumerable<PaidSchedule>>("PaidLossTable", "C:/Users/maheto/OneDrive - " +
-                "Arch Capital Group/Desktop/Work Files/Cashflow Modelling/PaidLossTest.csv", paidLossTypes);
-
-            var CapitalTable = GetCachedObject<IEnumerable<CapitalSchedule>>("CapitalTable","C:/Users/maheto/OneDrive - " +
-                "Arch Capital Group/Desktop/Work Files/Cashflow Modelling/CapitalScheduleTest.csv", capitalTypes);
-
-
-            var BufferTable = GetCachedObject<IEnumerable<BufferSchedule>>("BufferTable","C:/Users/maheto/OneDrive - " +
+                async () =>
+                {
+                    PremiumTable = await GetCachedObject<IEnumerable<PremiumSchedule>>("PremiumTable", "C:/Users/maheto/OneDrive - " +
+             "Arch Capital Group/Desktop/Work Files/Cashflow Modelling/PremiumScheduleTest.csv", premiumTypes);
+                },
+                async () =>
+                {
+                    IncurredLossTable = await GetCachedObject<IEnumerable<LossSchedule>>("IncurredLossTable", "C:/Users/maheto/OneDrive - " +
+             "Arch Capital Group/Desktop/Work Files/Cashflow Modelling/LossScheduleTest.csv", incurredLossTypes);
+                },
+                async () =>
+                {
+                    PaidLossTable = await GetCachedObject<IEnumerable<PaidSchedule>>("PaidLossTable", "C:/Users/maheto/OneDrive - " +
+             "Arch Capital Group/Desktop/Work Files/Cashflow Modelling/PaidLossTest.csv", paidLossTypes);
+                },
+                async () =>
+                {
+                    CapitalTable = await GetCachedObject<IEnumerable<CapitalSchedule>>("CapitalTable", "C:/Users/maheto/OneDrive - " +
+             "Arch Capital Group/Desktop/Work Files/Cashflow Modelling/CapitalScheduleTest.csv", capitalTypes);
+                },
+                async () =>
+                {
+                    BufferTable = await GetCachedObject<IEnumerable<BufferSchedule>>("BufferTable", "C:/Users/maheto/OneDrive - " +
                 "Arch Capital Group/Desktop/Work Files/Cashflow Modelling/BufferScheduleTest.csv", bufferTypes);
+                }
 
-
-            Task.WhenAll(PremiumTable, PaidLossTable, CapitalTable, BufferTable);
+                );
 
 
 
@@ -196,8 +213,8 @@ namespace IRR.Application.Service
             var NewDateRange = DateRange.Where(predicate => predicate.StartDate.Subtract(commutationDate).Days < 0).ToList();
 
 
-            return IRRCompute(PremiumTable.Result, PaidLossTable.Result, IncurredLossTable.Result, CapitalTable.Result, 
-                BufferTable.Result, commutationDate, 9.01930993488021/100, NewDateRange);
+            return IRRCompute(PremiumTable, PaidLossTable, IncurredLossTable, CapitalTable, 
+                BufferTable, commutationDate, 9.01930993488021/100, NewDateRange);
 
 
         }

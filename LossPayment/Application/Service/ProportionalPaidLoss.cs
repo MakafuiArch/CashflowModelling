@@ -1,6 +1,6 @@
 ﻿using LossPayment.Application.Payload.Response;
 using LossPayment.Application.Interface;
-using Microsoft.VisualBasic;
+
 
 
 namespace LossPayment.Application.Service
@@ -9,12 +9,12 @@ namespace LossPayment.Application.Service
     {
 
 
-        public IEnumerable<PaidLossResponse> GetPaidLosses(int LayerId, double LayerAmount, DateTime OccurrenceDate)
+        public IEnumerable<PaidLossResponse> GetPaidLossesByLayerId(int LayerId, double LayerAmount, DateTime OccurrenceDate)
         {
 
             var YearEnd = new DateTime(OccurrenceDate.Year, 12, 31);
-            var DateRange = Enumerable.Range(0, OccurrenceDate.Subtract(YearEnd).Days).AsParallel().Map(day 
-                => OccurrenceDate.AddDays(day));
+            var DateRange = Enumerable.Range(0, OccurrenceDate.Subtract(YearEnd).Days).AsParallel()
+                .Select(day => OccurrenceDate.AddDays(day)).ToList();
 
             Parallel.ForEach(DateRange, date =>
             {
@@ -26,6 +26,16 @@ namespace LossPayment.Application.Service
 
         }
 
+
+        public IEnumerable<PaidLossResponse> GetPaidLossesByMasterKey(int MasterKey, double LayerAmount, DateTime OccurrenceDate)
+        {
+
+
+            throw new NotImplementedException();
+        }
+
+
+        
 
 
     }
