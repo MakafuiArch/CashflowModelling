@@ -14,13 +14,11 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.4.0" />
   </ItemGroup>
 
-  <ItemGroup>
+  <!--<ItemGroup>
     <ProjectReference Include="..\IRRTest\IRRTest.csproj" />
-  </ItemGroup>
+  </ItemGroup>-->
 
   <ItemGroup>
-    <Folder Include="Application\Interface\" />
-    <Folder Include="Application\Service\" />
     <Folder Include="Domain\DTO\" />
     <Folder Include="Domain\Model\" />
     <Folder Include="Infrastracture\" />

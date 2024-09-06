@@ -33,37 +33,36 @@ namespace IRR.Application.Service
             var StartDate = (DateTime) input.QuarterStartDate!;
             var EndDate = (DateTime) input.QuarterEndDate!;
             var CommutationDate = input.CommutationDate;
-            var RetroProgramIds = input.RetroProgramIds;
+            var RetroProgramId = input.RetroProgramId;
             var SPInvestorId = input.SPInvestorId;
             var Capital = input.Capital;
             var AcquisitionExpenseRate = input.AcquisitionExpense;
 
             var bufferSchedule = new List<BufferSchedule>();
 
-            return await IRRCashFlow(StartDate, EndDate, CommutationDate, RetroProgramIds!, 
-                SPInvestorId, Capital, bufferSchedule, AcquisitionExpenseRate);
+            return await IRRCashFlow(StartDate, EndDate, CommutationDate, RetroProgramId, 
+                SPInvestorId, bufferSchedule, AcquisitionExpenseRate);
 
         }
 
 
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="StartDate"></param>
-        /// <param name="EndDate"></param>
-        /// <param name="CommutationDate"></param>
-        /// <param name="RetroProgramIds"></param>
-        /// <param name="SPInvestorId"></param>
-        /// <param name="Capital"></param>
-        /// <param name="AcquisitionExpenseRate"></param>
-        /// <returns></returns>
+      /// <summary>
+      /// 
+      /// </summary>
+      /// <param name="StartDate"></param>
+      /// <param name="EndDate"></param>
+      /// <param name="CommutationDate"></param>
+      /// <param name="RetroProgramId"></param>
+      /// <param name="SPInvestorId"></param>
+      /// <param name="bufferSchedules"></param>
+      /// <param name="AcquisitionExpenseRate"></param>
+      /// <returns></returns>
         public async Task<Dictionary<int,double>> IRRCashFlow(DateTime StartDate, 
             DateTime EndDate, 
-            DateTime CommutationDate, 
-            IEnumerable<int> RetroProgramIds, 
-            int SPInvestorId, 
-            double Capital, 
+            DateTime CommutationDate,
+            int RetroProgramId,
+            int SPInvestorId,  
             IEnumerable<BufferSchedule> bufferSchedules,
             double AcquisitionExpenseRate
             
@@ -71,6 +70,13 @@ namespace IRR.Application.Service
         {
 
             var responseDictionary = new Dictionary<int, double>();
+
+            IEnumerable<LossInput> LossTable = [];
+            IEnumerable<PremiumInput> PremiumInputs = [];
+            IEnumerable<PaidSchedule> PaidLossTable = [];
+            IEnumerable<PremiumSchedule> PremiumTable = [];
+            IEnumerable<LossSchedule> IncurredLossTable = [];
+            IEnumerable<CapitalSchedule> CapitalTable = [];
 
 
 
@@ -80,33 +86,38 @@ namespace IRR.Application.Service
             var EndDateRange = StartDateRange.Select(date => date.AddDays(1));
 
 
+
+
+            Parallel.Invoke(
+
+                async () => { LossTable = await GetLossInput(SPInvestorId, RetroProgramId); },
+
+                async () => { PremiumInputs = await GetPremiumInput(SPInvestorId, RetroProgramId).ConfigureAwait(false); }
+
+                );
+
+            
+            Parallel.Invoke(
+
+                () => {  PremiumTable = GetPremiumSchedule(LossTable, PremiumInputs); },
+
+                () => {  PaidLossTable = GetPaidLossSchedule(LossTable); },
+
+                () => {  IncurredLossTable = GetIncurredLossSchedule(LossTable); },
+
+                async () => {  CapitalTable = await GetCapitalSchedule(); }
+
+                );
+
+
             IEnumerable<DateTuple> DateRange =
                 (IEnumerable<DateTuple>)ListsToTuple<DateTime, DateTime>(StartDateRange,
                 EndDateRange);
 
-            //Read all the tables as IRR Inputs
-
-            Task<IEnumerable<PremiumSchedule>> PremiumTable =
-                GetPremiumSchedule(SPInvestorId, RetroProgramIds);
 
 
-            Task<IEnumerable<PaidSchedule>> PaidLossTable = this.GetPaidLossSchedule(SPInvestorId,
-                                                                                RetroProgramIds);
-
-            Task<IEnumerable<LossSchedule>> IncurredLossTable = this.GetIRRLossSchedule();
-
-            Task<IEnumerable<CapitalSchedule>> CapitalTable = this.GetCapitalSchedule();
-
-
-            await Task.WhenAll(PremiumTable, PaidLossTable, IncurredLossTable, CapitalTable);
-
-
-            var BufferDate = bufferSchedules.OrderBy(p => p.BufferDate).First().BufferDate;
-
-
-
-            var dataframeIRRResponse = await IRRCompute(PremiumTable.Result, PaidLossTable.Result,
-                                        IncurredLossTable.Result, CapitalTable.Result,bufferSchedules,
+            var dataframeIRRResponse = await IRRCompute(PremiumTable, PaidLossTable,
+                                        IncurredLossTable, CapitalTable,bufferSchedules,
                                         CommutationDate,  (double) AcquisitionExpenseRate, DateRange);
 
             responseDictionary.Add(SPInvestorId, dataframeIRRResponse.irr);
@@ -191,6 +202,8 @@ namespace IRR.Application.Service
 
         }
 
+
+
         /// <summary>
         /// 
         /// </summary>
@@ -218,9 +231,14 @@ namespace IRR.Application.Service
         //---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
-        public async Task<IEnumerable<LossInput>> GetLossInput(int SPInvestor, List<int>? RetroProgramIds)
+        public async Task<IEnumerable<LossInput>> GetLossInput(int SPInvestor, int  RetroProgramId)
         {
-            return await _queryService.ApiResponseSet<List<int>, IEnumerable<LossInput>>("", RetroProgramIds!);
+            return await _queryService.ApiResponseSet<int, IEnumerable<LossInput>>("", RetroProgramId);
+        }
+
+        public async Task<IEnumerable<PremiumInput>> GetPremiumInput(int SPInvestor, int RetroProgramId)
+        {
+            return await _queryService.ApiResponseSet<int, IEnumerable<PremiumInput>>("", RetroProgramId);
         }
 
         public async Task<PremiumServiceResponse> TestGetDepositPremiums()

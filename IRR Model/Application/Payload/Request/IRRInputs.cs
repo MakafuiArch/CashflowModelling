@@ -10,7 +10,7 @@ namespace IRR.Application.Payload.Request
         DateTime? QuarterStartDate,
         DateTime? QuarterEndDate,
         double Capital,
-        IEnumerable<int>? RetroProgramIds,
+        int RetroProgramId,
         int SPInvestorId,
         IEnumerable<CapitalSchedule>? CapitalSchedules,
         int ViewType,

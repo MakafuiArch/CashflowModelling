@@ -1,34 +1,31 @@
 ﻿namespace IRR.Domain.DTOs
 {
-    public class LossSchedule(int RetroProfileId, 
-        int RetroProgramId,
-        int SPInvestorId, int Year, 
-        DateTime LossOccurrenceDay, 
-        double UnadjustedIncurredLoss, 
-        double IncurredLoss)
+    public class LossSchedule
     {
 
-        private readonly int _year = Year;
-        private readonly DateTime _lossOccurenceDay = LossOccurrenceDay;
-        private readonly double _unadjustedIncurredLoss = UnadjustedIncurredLoss;
-        private double _incurredLoss = IncurredLoss;
-        private readonly int _RetroProfileId = RetroProfileId;
-        private readonly int _RetroProgramId = RetroProgramId;
-        private readonly int _SPInvestorId = SPInvestorId;
+        private  int _year;
+        private  DateTime _lossOccurenceDay;
+        private  double _unadjustedIncurredLoss;
+        private  double _incurredLoss;
 
 
+        public LossSchedule() { }
 
-        public int RetroProfileId => _RetroProfileId;
+        public LossSchedule(int Year,
+        DateTime LossOccurrenceDay,
+        double UnadjustedIncurredLoss,
+        double IncurredLoss)
+        {
+            _year = Year;
+            _unadjustedIncurredLoss = UnadjustedIncurredLoss;
+            _lossOccurenceDay = LossOccurrenceDay;
+            _incurredLoss = IncurredLoss;
+        }
 
-        public int RetroProgramId => _RetroProgramId;
+        public int Year {get => _year; set => _year = value; }
+        public DateTime LossOccurenceDay { get => _lossOccurenceDay; set => _lossOccurenceDay = value; }
 
-        public int SPInvestorId => _SPInvestorId;
-
-
-        public int Year => _year;
-        public DateTime LossOccurenceDay => _lossOccurenceDay;
-
-        public double UnadjustedIncurredLoss => _unadjustedIncurredLoss;
+        public double UnadjustedIncurredLoss { get => _unadjustedIncurredLoss; set => _unadjustedIncurredLoss = value; }
 
         public double IncurredLoss { get => _incurredLoss; set { _incurredLoss = value; } }
     }

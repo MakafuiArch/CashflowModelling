@@ -446,6 +446,25 @@ namespace IRR.Application.Service
         }
 
 
+        protected virtual IEnumerable<LossSchedule> GetIncurredLossSchedule(IEnumerable<LossInput> inputs)
+        {
+
+            return inputs.AsParallel().Map(p =>
+                
+                new LossSchedule
+                {
+                    Year = p.OccurrenceDay.Year,
+                    UnadjustedIncurredLoss = p.SubjectLoss,
+                    LossOccurenceDay = p.OccurrenceDay,
+                    
+
+                }
+            );
+
+            throw new NotImplementedException();
+        }
+
+
 
         protected virtual IEnumerable<PremiumSchedule> GetPremiumSchedule(IEnumerable<LossInput> LossInputs,
             IEnumerable<PremiumInput> PremiumInputs,
