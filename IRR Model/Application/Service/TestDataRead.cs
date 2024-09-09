@@ -1,5 +1,4 @@
 ﻿using IRR.Application.Interface;
-using IRR.Domain.DTOs;
 
 using Microsoft.Data.Analysis;
 using Newtonsoft.Json;

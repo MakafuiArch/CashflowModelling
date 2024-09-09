@@ -3,6 +3,11 @@ using LossPayment.Application.Interface;
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Caching.Memory;
 using LossPayment.Application.Payload.Request;
+using CsvHelper.Configuration;
+using System.Globalization;
+using CsvHelper;
+using SqlTableDependency.Extensions.Notifications;
+
 
 
 
@@ -15,10 +20,13 @@ namespace LossPayment.Application.Service
 
         private readonly IMemoryCache memoryCache;
 
-        public ProportionalPaidLoss(IQuery query, IMemoryCache memoryCache) { 
+        private readonly IConfiguration configuration;
+
+        public ProportionalPaidLoss(IQuery query, IMemoryCache memoryCache, IConfiguration configuration) { 
 
             this.query = query;
             this.memoryCache = memoryCache;
+            this.configuration = configuration;
         }
 
 
@@ -52,7 +60,7 @@ namespace LossPayment.Application.Service
             ConcurrentBag<PaidLossResponse> results = [];
 
 
-             var PaymentPatternResult = await GetCachedObject(LayerId.ToString(),LayerId, GetPaymentPatternByLayer);
+             var PaymentPatternResult = await GetCachedObject(LayerId.ToString(),LayerId, GetPaymentPatternByLayerCSV<IEnumerable<PaymentPattern>>);
             
 
             var PaymentPattern = PaymentPatternResult.AsParallel().Where(pay => pay.Months == (MultiYearPeriod + 1) * 12)
@@ -124,6 +132,30 @@ namespace LossPayment.Application.Service
             var QueryString = query.GetLossPaymentPatternQuery(LayerId);
 
             return await query.QuerySet<PaymentPattern>(QueryString);
+        }
+
+        private async Task<T> GetPaymentPatternByLayerCSV<T>(int LayerId)
+        {
+
+            var FilePath = configuration.GetValue<string>("ConnectionString:PaymentPatternPath") + $"PaymentPattern_{LayerId}.csv";
+
+            StreamReader streamReader = new StreamReader(FilePath);
+
+
+            var csvconf = new CsvConfiguration(cultureInfo: CultureInfo.InvariantCulture)
+            {
+                HasHeaderRecord = false,
+                Delimiter = ",",
+                Comment = '%'
+            };
+
+            var csvFileReader = new CsvReader(streamReader, csvconf);
+
+            var records = csvFileReader.GetRecord<T>();
+            
+
+
+            return await Task.FromResult(records);
         }
       
 

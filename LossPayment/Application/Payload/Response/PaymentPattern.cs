@@ -1,4 +1,6 @@
-﻿namespace LossPayment.Application.Payload.Response
+﻿using CsvHelper.Configuration.Attributes;
+
+namespace LossPayment.Application.Payload.Response
 {
     public class PaymentPattern
     {
@@ -17,9 +19,10 @@
         }
 
 
-
+        [Index(0)]
         public int Months { get => PaymentMonths; set => PaymentMonths = value; }
 
+        [Index(1)]
         public double Percentage { get => PaymentPercentage; set => PaymentPercentage = value; }
 
 
