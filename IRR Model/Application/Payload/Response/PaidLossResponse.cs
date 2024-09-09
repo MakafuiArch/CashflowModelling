@@ -1,5 +1,4 @@
-﻿using IRR.Domain.Model;
-using LanguageExt;
+﻿
 
 namespace IRR.Application.Payload.Response
 {

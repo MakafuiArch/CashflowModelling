@@ -8,7 +8,7 @@ namespace LossPayment.Application.Interface
     public interface IPaidLoss
     {
 
-        IEnumerable<PaidLossResponse> GetPaidLossesByLayerId(int LayerId, double LayerAmount, DateTime OccurrenceDate);
+        Task<IEnumerable<PaidLossResponse>> GetPaidLossesByLayerId(int LayerId, double LayerAmount, DateTime OccurrenceDate, int MultiYearPeriod);
 
         IEnumerable<PaidLossResponse> GetPaidLossesByMasterKey(int MasterKey, double LayerAmount, DateTime OccurrenceDate);
     }

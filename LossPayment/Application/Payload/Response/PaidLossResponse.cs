@@ -1,23 +1,24 @@
 ﻿namespace LossPayment.Application.Payload.Response
 {
 
-    public class PaidLossResponse(
-
-        int LayerId,
-        int Day,
-        DateTime OccurrenceDay,
-        double Ratio,
-        double PaidLoss
-
-        )
+    public class PaidLossResponse
     {
-        private int _layerId = LayerId;
-        private int _day = Day;
-        private DateTime _occurrenceDay = OccurrenceDay;
-        private double _ratio = Ratio;
-        private double _paidLoss = PaidLoss;
+        private int _layerId ;
+        private int _day ;
+        private DateTime _occurrenceDay ;
+        private double _ratio;
+        private double _paidLoss ;
 
+        public PaidLossResponse() { }
 
+        public PaidLossResponse(int LayerId, int Day, DateTime OccurrenceDay, double Ratio, double PaidLoss)
+        {
+            _layerId = LayerId ;
+            _day = Day ;
+            _occurrenceDay = OccurrenceDay ;
+            _ratio = Ratio ;
+            _paidLoss = PaidLoss ;
+        }
 
         public int LayerId { get => _layerId; set => _layerId = value; }
         public int Day { get => _day; set => _day = value; }

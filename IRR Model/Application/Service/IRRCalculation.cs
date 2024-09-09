@@ -83,7 +83,7 @@ namespace IRR.Application.Service
 
 
 
-            var CashFlowDataFrame = new Microsoft.Data.Analysis.DataFrame(CashFlowStart, CashFlowEnd,
+            var CashFlowDataFrame = new DataFrame(CashFlowStart, CashFlowEnd,
                 GrossEarnedPremium, IncurLosses, PaidLoss, CapitalTab, Buffer);
 
 
@@ -503,7 +503,7 @@ namespace IRR.Application.Service
             Parallel.ForEach(LossInputs, (loss) => {
 
                 var UnadjustedPremium = loss.ReinstPremium + (double)premiumServiceResponses.AsParallel().Map(p =>
-                                            p.PremiumValues.AsParallel().Find(k => (k.LayerId == loss.LayerId)
+                                            p.premiumValues.AsParallel().Find(k => (k.LayerId == loss.LayerId)
                                             & (k.Date == loss.OccurrenceDay)).Select(k => k.Value)).FirstOrDefault();
 
 

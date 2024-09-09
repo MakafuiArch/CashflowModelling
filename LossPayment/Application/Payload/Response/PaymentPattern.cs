@@ -18,7 +18,7 @@
 
 
 
-        public int Months { get => PaymentMonths; set => PaymentMonths = value }
+        public int Months { get => PaymentMonths; set => PaymentMonths = value; }
 
         public double Percentage { get => PaymentPercentage; set => PaymentPercentage = value; }
 
