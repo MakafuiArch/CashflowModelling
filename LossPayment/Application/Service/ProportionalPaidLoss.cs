@@ -125,8 +125,6 @@ namespace LossPayment.Application.Service
 
             return await query.QuerySet<PaymentPattern>(QueryString);
         }
-
-
       
 
 
