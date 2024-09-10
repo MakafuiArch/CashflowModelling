@@ -35,36 +35,48 @@ namespace IRR.Application.Service
             var CommutationDate = input.CommutationDate;
             var RetroProgramId = input.RetroProgramId;
             var SPInvestorId = input.SPInvestorId;
-            var Capital = input.Capital;
             var AcquisitionExpenseRate = input.AcquisitionExpense;
-
-            var bufferSchedule = new List<BufferSchedule>();
+            var InvestmentIncomeOnFloat = input.InvestmentIncomeOnFloat;
+            var CommissionRatio = input.CommissionRatio;
+            var AssumedBufferFactor = input.AssumedBufferFactor;
+            var bufferSchedule = input.BufferSchedules;
+            var RollForwardFactors = input.RollForwardInputs;
 
             return await IRRCashFlow(StartDate, EndDate, CommutationDate, RetroProgramId, 
-                SPInvestorId, bufferSchedule, AcquisitionExpenseRate);
+                SPInvestorId, bufferSchedule!, RollForwardFactors!,InvestmentIncomeOnFloat, CommissionRatio, 
+                AcquisitionExpenseRate, AssumedBufferFactor);
 
         }
 
 
 
-      /// <summary>
-      /// 
-      /// </summary>
-      /// <param name="StartDate"></param>
-      /// <param name="EndDate"></param>
-      /// <param name="CommutationDate"></param>
-      /// <param name="RetroProgramId"></param>
-      /// <param name="SPInvestorId"></param>
-      /// <param name="bufferSchedules"></param>
-      /// <param name="AcquisitionExpenseRate"></param>
-      /// <returns></returns>
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="StartDate"></param>
+        /// <param name="EndDate"></param>
+        /// <param name="CommutationDate"></param>
+        /// <param name="RetroProgramId"></param>
+        /// <param name="SPInvestorId"></param>
+        /// <param name="bufferSchedules"></param>
+        /// <param name="rollForwardInputs"></param>
+        /// <param name="InvestmentIncomeOnFloat"></param>
+        /// <param name="CommissionRatio"></param>
+        /// <param name="AcquisitionExpenseRate"></param>
+        /// <param name="AssumedBufferFactor"></param>
+        /// <returns></returns>
         public async Task<Dictionary<int,double>> IRRCashFlow(DateTime StartDate, 
             DateTime EndDate, 
             DateTime CommutationDate,
             int RetroProgramId,
             int SPInvestorId,  
             IEnumerable<BufferSchedule> bufferSchedules,
-            double AcquisitionExpenseRate
+            IEnumerable<RollForwardInput> rollForwardInputs,
+            double InvestmentIncomeOnFloat, 
+            double CommissionRatio,
+            double AcquisitionExpenseRate, 
+            double AssumedBufferFactor
             
             )
         {
@@ -109,6 +121,11 @@ namespace IRR.Application.Service
 
                 );
 
+            var TotalCapital = CapitalTable.Sum(p => p.IncrementalCapitalAdded);
+
+
+            (PremiumTable, IncurredLossTable) = RollForward(rollForwardInputs, PremiumTable, IncurredLossTable, PaidLossTable,
+                                        TotalCapital, InvestmentIncomeOnFloat, CommissionRatio, AcquisitionExpenseRate, AssumedBufferFactor);
 
             IEnumerable<DateTuple> DateRange =
                 (IEnumerable<DateTuple>)ListsToTuple<DateTime, DateTime>(StartDateRange,

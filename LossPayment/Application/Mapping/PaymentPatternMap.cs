@@ -10,12 +10,8 @@ namespace LossPayment.Application.Mapping
 
         public PaymentPatternMap() {
 
-
-
             Map(pattern => pattern.Months).Index(0);
             Map(pattern => pattern.Percentage).Index(1);
-        
-        
         
         }
 

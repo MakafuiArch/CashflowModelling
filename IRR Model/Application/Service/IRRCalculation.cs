@@ -403,7 +403,7 @@ namespace IRR.Application.Service
 
             IEnumerable<int> UniqueIds = [];
             IEnumerable<int> DayCount = [];
-
+            var PaidLoss = new List<PaidLossResponse>();
 
             Parallel.Invoke(
 
@@ -411,8 +411,6 @@ namespace IRR.Application.Service
                 () => { DayCount = LossInputs.AsParallel().Map(loss => loss.LayerInception.Year).Order().Distinct().ToList(); }
 
                 );
-
-            var PaidLoss = new List<PaidLossResponse>();
 
 
             Parallel.ForEach(UniqueIds, async Id =>
@@ -608,7 +606,8 @@ namespace IRR.Application.Service
 
 
 
-        protected virtual IEnumerable<double> RollForward( IEnumerable<RollForwardInput> RollForwardInputs, 
+        protected virtual (IEnumerable<PremiumSchedule> PremiumTable, IEnumerable<LossSchedule> IncurredLossTable) RollForward( 
+            IEnumerable<RollForwardInput> RollForwardInputs, 
              IEnumerable<PremiumSchedule> PremiumTable, 
              IEnumerable<LossSchedule> IncurredLossTable,  IEnumerable<PaidSchedule>PaidLossTable,
             double TotalCapital,
@@ -679,7 +678,7 @@ namespace IRR.Application.Service
                     p.EarnedPremium = p.UnadjustedPremium * RollForward;
                 }));
 
-                Task IncurredTable = Task.Run(() => IncurredLossTable.AsParallel().ForEach(i =>
+                Task IncurredTable = Task.Run(() => IncurredLossTable.AsParallel().ForAll(i =>
                 {
                     if (i.Year - 1 != iterator)
                     {
@@ -719,14 +718,16 @@ namespace IRR.Application.Service
 
 
 
-                } );
+                } 
+                
+                );
 
 
            
 
             
 
-            return CumulativeExpectedEarnedProfits;
+            return (PremiumTable, IncurredLossTable);
 
         }
 

@@ -6,7 +6,8 @@ using LossPayment.Application.Payload.Request;
 using CsvHelper.Configuration;
 using System.Globalization;
 using CsvHelper;
-using SqlTableDependency.Extensions.Notifications;
+using LossPayment.Application.Mapping;
+using Microsoft.VisualBasic;
 
 
 
@@ -22,11 +23,14 @@ namespace LossPayment.Application.Service
 
         private readonly IConfiguration configuration;
 
+       
+
         public ProportionalPaidLoss(IQuery query, IMemoryCache memoryCache, IConfiguration configuration) { 
 
             this.query = query;
             this.memoryCache = memoryCache;
             this.configuration = configuration;
+           
         }
 
 
@@ -46,7 +50,7 @@ namespace LossPayment.Application.Service
                 }
             });
 
-            return await Task.FromResult(response);
+            return await Task.FromResult(response.OrderBy(p => p.Day));
 
         }
 
@@ -58,45 +62,84 @@ namespace LossPayment.Application.Service
         {
 
             ConcurrentBag<PaidLossResponse> results = [];
+            var PaymentDictionary = new ConcurrentDictionary<int, double>();
 
 
-             var PaymentPatternResult = await GetCachedObject(LayerId.ToString(),LayerId, GetPaymentPatternByLayerCSV<IEnumerable<PaymentPattern>>);
+            var PaymentPatternResult = (await GetPaymentPatternByLayerCSV<PaymentPattern, PaymentPatternMap>(LayerId)).ToList();
+
+
+            var lastPaymentMonth = PaymentPatternResult.AsParallel().Where(p => 
+                            p.Percentage ==1).OrderBy(p => p.Months).Select(p => p.Months).FirstOrDefault();
+
+
+            PaymentPatternResult = PaymentPatternResult.AsParallel().Where(p => (p.Months <= lastPaymentMonth)).ToList();
+
+
+            var RangeDate = Enumerable.Range(0, OccurrenceDate.AddYears(lastPaymentMonth/12).Subtract(OccurrenceDate).Days)
+                                      .Select(day => OccurrenceDate.AddDays(day)).ToList();  
+
             
-
-            var PaymentPattern = PaymentPatternResult.AsParallel().Where(pay => pay.Months == (MultiYearPeriod + 1) * 12)
-                                                                  .Select(p => p.Percentage).FirstOrDefault();
-
-            var YearEnd = new DateTime(OccurrenceDate.Year, 12, 31);
-
-            var YearStart = new DateTime(OccurrenceDate.Year, 1, 1);
-
-            
-            var WholeYearDays = YearEnd.Subtract(YearStart).Days;
-
-
-            var DateRange = Enumerable.Range(0, OccurrenceDate.Subtract(YearEnd).Days).AsParallel()
-                .Select(day => OccurrenceDate.AddDays(day)).ToList();
-
-
-            Parallel.ForEach(DateRange, date =>
+       
+            Parallel.ForEach(PaymentPatternResult, req =>
             {
 
-                var datediff = YearEnd.Subtract(date).Days;
+                var totalYearDays = OccurrenceDate.AddYears(req.Months/12).Subtract(OccurrenceDate).Days;
 
-                var percentage = PaymentPattern * datediff / WholeYearDays;
-
-                results.Add(new PaidLossResponse
+                if(req.Months == 12)
                 {
-                    LayerId = LayerId,
-                    Day = DateRange.IndexOf(date) + MultiYearPeriod * 12 + 1,
-                    OccurrenceDay = date,
-                    Ratio = percentage,
-                    PaidLoss = LayerAmount * percentage 
+                    PaymentDictionary.TryAdd(req.Months/12, req.Percentage/totalYearDays);
 
-                });
+                }
+                else{
+
+                    PaymentDictionary.TryAdd(req.Months / 12, (req.Percentage 
+                                            - PaymentPatternResult.Find(p => p.Months == req.Months - 12)!.Percentage)/totalYearDays);
+                }
 
             });
 
+            var nextLayerAmount = LayerAmount;
+
+
+            for(int i=0; i < RangeDate.Count; i++)
+            {
+
+
+                int dictKey = (((int) Math.Floor((decimal) DateAndTime.DateDiff(DateInterval.Year, OccurrenceDate, RangeDate[i]))) * 12)/12 ;
+               
+                if(i == 0)
+                {
+                    results.Add(new PaidLossResponse
+
+                    {
+
+                        LayerId = LayerId,
+                        Day = i,
+                        OccurrenceDay = RangeDate[i],
+                        Ratio = PaymentDictionary[dictKey],
+                        PaidLoss =  PaymentDictionary[dictKey] * LayerAmount
+                    }
+
+                 );
+
+                    continue;
+                }
+
+                results.Add(new PaidLossResponse
+
+                    {
+
+                        LayerId = LayerId,
+                        Day = i, 
+                        OccurrenceDay = RangeDate[i],
+                        Ratio = PaymentDictionary[dictKey],
+                        PaidLoss = (double) results.ElementAt(i-1).PaidLoss + PaymentDictionary[dictKey] * LayerAmount
+                    }
+
+                    );
+
+                
+            }
 
             return await Task.FromResult(results.ToList());
 
@@ -116,7 +159,7 @@ namespace LossPayment.Application.Service
         {
 
 #pragma warning disable CS8600 
-            if (memoryCache.TryGetValue(cachekey, out TResult result))
+            if (!memoryCache.TryGetValue(cachekey, out TResult result))
             {
                 result = await cacheFunc.Invoke(input);
                 memoryCache.Set(cachekey, result);
@@ -134,7 +177,7 @@ namespace LossPayment.Application.Service
             return await query.QuerySet<PaymentPattern>(QueryString);
         }
 
-        private async Task<T> GetPaymentPatternByLayerCSV<T>(int LayerId)
+        private async Task<IEnumerable<T>> GetPaymentPatternByLayerCSV<T, MapType>(int LayerId) where MapType: ClassMap
         {
 
             var FilePath = configuration.GetValue<string>("ConnectionString:PaymentPatternPath") + $"PaymentPattern_{LayerId}.csv";
@@ -144,14 +187,18 @@ namespace LossPayment.Application.Service
 
             var csvconf = new CsvConfiguration(cultureInfo: CultureInfo.InvariantCulture)
             {
-                HasHeaderRecord = false,
+
+                HasHeaderRecord = true,
                 Delimiter = ",",
                 Comment = '%'
             };
 
             var csvFileReader = new CsvReader(streamReader, csvconf);
 
-            var records = csvFileReader.GetRecord<T>();
+
+            csvFileReader.Context.RegisterClassMap<MapType>();
+
+            var records = csvFileReader.GetRecords<T>();
             
 
 

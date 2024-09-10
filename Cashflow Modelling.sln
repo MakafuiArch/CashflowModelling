@@ -4,9 +4,7 @@ VisualStudioVersion = 17.10.34928.147
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IRR", "IRR Model\IRR.csproj", "{7A0824D4-3CB3-4557-8D9B-A09FD5749D04}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LossPayment", "LossPayment\LossPayment.csproj", "{9B80EACE-C8EC-4ABA-9140-B021117DF7FD}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "IRRTest", "IRRTest\IRRTest.csproj", "{D2FBB097-53CB-454A-A8CA-E033683F89C6}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "IRRTest", "IRRTest\IRRTest.csproj", "{D2FBB097-53CB-454A-A8CA-E033683F89C6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -18,10 +16,6 @@ Global
 		{7A0824D4-3CB3-4557-8D9B-A09FD5749D04}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7A0824D4-3CB3-4557-8D9B-A09FD5749D04}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7A0824D4-3CB3-4557-8D9B-A09FD5749D04}.Release|Any CPU.Build.0 = Release|Any CPU
-		{9B80EACE-C8EC-4ABA-9140-B021117DF7FD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{9B80EACE-C8EC-4ABA-9140-B021117DF7FD}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{9B80EACE-C8EC-4ABA-9140-B021117DF7FD}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{9B80EACE-C8EC-4ABA-9140-B021117DF7FD}.Release|Any CPU.Build.0 = Release|Any CPU
 		{D2FBB097-53CB-454A-A8CA-E033683F89C6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{D2FBB097-53CB-454A-A8CA-E033683F89C6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D2FBB097-53CB-454A-A8CA-E033683F89C6}.Release|Any CPU.ActiveCfg = Release|Any CPU

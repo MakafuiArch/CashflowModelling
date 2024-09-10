@@ -9,16 +9,20 @@ namespace IRR.Application.Payload.Request
         DateTime CommutationDate,
         DateTime? QuarterStartDate,
         DateTime? QuarterEndDate,
-        double Capital,
         int RetroProgramId,
         int SPInvestorId,
         IEnumerable<CapitalSchedule>? CapitalSchedules,
+        IEnumerable<BufferSchedule>? BufferSchedules,
+        IEnumerable<RollForwardInput>? RollForwardInputs,
         int ViewType,
-        double AcquisitionExpense
+        double InvestmentIncomeOnFloat,
+        double CommissionRatio,
+        double AcquisitionExpense, 
+        double AssumedBufferFactor
         )
     {
 
-        private IEnumerable<CapitalSchedule> GetCapitalSchedule() => CapitalSchedules.IsNull() ? new List<CapitalSchedule>([new
-                CapitalSchedule(1, Capital, (DateTime) QuarterStartDate!)]) : CapitalSchedules!;
+        //private IEnumerable<CapitalSchedule> GetCapitalSchedule() => CapitalSchedules.IsNull() ? new List<CapitalSchedule>([new
+        //        CapitalSchedule(1, Capital, (DateTime) QuarterStartDate!)]) : CapitalSchedules!;
     }
 }
