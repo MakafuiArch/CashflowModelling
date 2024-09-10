@@ -1,6 +1,0 @@
-@LossPayment_HostAddress = http://localhost:5291
-
-GET {{LossPayment_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###
